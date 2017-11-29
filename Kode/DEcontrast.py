@@ -22,11 +22,21 @@ def d_nl():
 
 def d_lin():
 
-def Es(t, Lambda, Omega_m0):
-	#t = variable x, keeping the symbol x open for use as array
-	E = np.sqrt(Omega_m0*np.exp(-3*t) + Lambda/3.)
-	dEoverE = -3./2 * Omega_m0*exp(-4*t)/(Omega_m0*np.exp(-3*t) + Lambda/3.)
-	return [E,dEoverE]
+
+"""
+
+H_0 = 1.	#km/s/Mpc
+
+def expansionfunc(a, Omega_m0, Omega_K, Lambda):
+
+	E = np.sqrt(Omega_m0/a**3 + Omega_K/a**2 + Lambda/3.)
+
+	dE_E = - (3./2. *Omega_m0/a**4 + Omega_K/a**3)/(Omega_m0/a**3 + Omega_K/a**2 + Lambda/3.)
+
+	return [E, dE_E]
+
+	
+
 """
 def function(x, t, Lambda, Omega_m0):
 	#Es(t, Lambda, Omega_m0)
@@ -40,17 +50,24 @@ def function(x, t, Lambda, Omega_m0):
 	deltadd[1] = - 3*np.exp(-t)*(1 - Omega_m0/2./(Omega_m0*np.exp(-3*t) + Lambda/3.))*d1 + 4./3*d1**2/(1+d) + 4./3 * Omega_m0*np.exp(-5*t)/(np.sqrt(Omega_m0*np.exp(-3*t) + Lambda/3.))**2*d*(1+d)
 
 	return deltadd
+"""
+
 
 def nonlinear(x, a, Lambda, Omega_m0, Omega_K):
 	#Es(t, Lambda, Omega_m0)
 	#a = 3*(np.exp(-t) - Es[1]/2.)
 	#b = 4/3.
 	#c = 4/3. * Omega_m0*np.exp(-5*t)/Es[0]
+
+	Es = expansionfunc(a, Omega_m0, Omega_K, Lambda)
+	E = Es[0]
+	dEdtE = Es[1]
+
 	d = x[0]
 	d1 = x[1]
 	deltadd = [[],[]]
-	deltadd[0] = d
-	deltadd[1] = - 3./a*(1 - Omega_m0/2./a**3/(Omega_m0/a**3 - Omega_K/a**2 + Lambda/3.))*d1 + 4./3*d1**2/(1+d) + 4./3 * Omega_m0/a**5/(Omega_m0/a**3 - Omega_K/a**2 + Lambda/3.)*d*(1+d)
+	deltadd[0] = d1
+	deltadd[1] = - (3./a + dEdtE)*d1 + 4./3.*d1**2/(1+d) + 4./3. * float(Omega_m0)/a**5/E**2*d*(1+d)
 
 	return deltadd
 
@@ -58,15 +75,19 @@ def nonlinear(x, a, Lambda, Omega_m0, Omega_K):
 
 def linear(x, a, Lambda, Omega_m0, Omega_K):
 
+	Es = expansionfunc(a, Omega_m0, Omega_K, Lambda)
+	E = Es[0]
+	dEdtE = Es[1]
+
 	d = x[0]
 	d1 = x[1]
 	deltadd = [[],[]]
-	deltadd[0] = d
-	deltadd[1] = - (3./a - 3/2. * Omega_m0/a**4/(Omega_m0/a**3 - Omega_K/a**2 + Lambda/3.))*d1 + 4./3 * Omega_m0/a**5/(Omega_m0/a**3 - Omega_K/a**2 + Lambda/3.)*d
+	deltadd[0] = d1
+	deltadd[1] = - (3./a + dEdtE)*d1 + 4./3 * float(Omega_m0)/a**5/E**2*d
 
 	return deltadd
 
-eps = 1e-4
+eps = 1.63e-5
 N = 100000
 
 a = np.linspace(eps, 1.1, N)
@@ -74,10 +95,16 @@ t = np.log(a)
 
 Lambda = float(sys.argv[1])
 Omega_m0 = float(sys.argv[2])
-Omega_K = 1 - Omega_m0 - Lambda
 
-delta_0 = 1.0
-delta1_1 = 1e-6
+if len(sys.argv) == 3:
+	Omega_K = 1 - Omega_m0 - Lambda
+else:
+	Omega_K = float(sys.argv[3])
+
+print Omega_K
+
+delta_0 = 1e-4
+delta1_1 = 5e-5
 
 
 #z2 = odeint(function, [0, 1e-5], t, args=(Lambda, Omega_m0)
@@ -86,14 +113,29 @@ deltanl = odeint(nonlinear, [delta_0, delta1_1], a, args=(Lambda, Omega_m0, Omeg
 
 deltalin = odeint(linear, [delta_0, delta1_1], a, args=(Lambda, Omega_m0, Omega_K))
 
+print deltanl[-1,0], deltalin[-1,0]
+
 delta_c = np.array([1.686]*N)
 
 
 
-mpl.plot(a, delta_c, "--r")
+mpl.plot(a, delta_c, "--c", linewidth = 0.75, label=r"$\delta _c = 1.686$")
 
-mpl.plot(a, deltanl[:, 0], "--b")
-mpl.plot(a, deltalin[:, 0], "--g")
+mpl.plot(a, deltanl[:, 0], "--b", linewidth = 0.75, label = r"$\delta _{non-linear}$")
+mpl.plot(a, deltalin[:, 0], "-y", linewidth = 0.75, label = r"$\delta _{linear}$")
+mpl.xlabel("a(t)")
+mpl.ylabel(r" $ \delta $")
+mpl.legend()#[r"$\delta _c = 1.686$", r"$\delta _{non-linear}$", r"$\delta _{linear}$"])
+mpl.xscale("log")
+mpl.yscale("log")
+
+mpl.show()
+
+"""
+mpl.plot(a, delta_c, "--c", linewidth = 0.75)
+
+mpl.plot(a, deltanl[:, 1], "--b", linewidth = 0.75)
+mpl.plot(a, deltalin[:, 1], "--g", linewidth = 0.75)
 mpl.xlabel("a(t)")
 mpl.ylabel(r" $ \delta $")
 mpl.legend([r"$\delta _c$", r"$\delta _{non-linear}$", r"$\delta _{linear}$"])
@@ -101,15 +143,4 @@ mpl.xscale("log")
 mpl.yscale("log")
 
 mpl.show()
-
-mpl.plot(a, delta_c, "--r")
-
-mpl.plot(a, deltanl[:, 1], "--b")
-mpl.plot(a, deltalin[:, 1], "--g")
-mpl.xlabel("a(t)")
-mpl.ylabel(r" $ \delta $")
-mpl.legend([r"$\delta _c$", r"$\delta _{non-linear}$", r"$\delta _{linear}$"])
-mpl.xscale("log")
-mpl.yscale("log")
-
-mpl.show()
+"""

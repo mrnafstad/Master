@@ -52,7 +52,59 @@ mpl.show()
 mpl.plot(a, sofa, linewidth = 0.75, label = r"s, $\Omega =$ (%.1f, %.1f, %.1f) = %.1f " %(Omega_m0, Omega_K, Lambda, omega))
 mpl.xlabel("a(t)")
 mpl.ylabel("s(a)")
+mpl.title(r"$s_0 = 1.0 $")
 mpl.legend()
 mpl.yscale("log")
 mpl.xscale("log")
 mpl.show()
+
+s0 = 0.5
+
+#result = odeint(s, s0, z, args=(Lambda, Omega_m0, Omega_K))
+
+sofa = odeint(s_a, s0, a, args = (Omega_m0, Omega_K, Lambda, a0))
+
+"""
+mpl.plot(z, result, linewidth = 0.75, label = "s")
+mpl.xlabel("z(t)")
+mpl.ylabel("s(z)")
+mpl.legend()
+#mpl.yscale("log")
+mpl.xscale("log")
+mpl.show()
+"""
+
+mpl.plot(a, sofa, linewidth = 0.75, label = r"s, $\Omega =$ (%.1f, %.1f, %.1f) = %.1f " %(Omega_m0, Omega_K, Lambda, omega))
+mpl.xlabel("a(t)")
+mpl.ylabel("s(a)")
+mpl.title(r"$s_0=0.5$")
+mpl.legend()
+mpl.yscale("log")
+mpl.xscale("log")
+mpl.show()
+
+s0 = 2.0
+
+#result = odeint(s, s0, z, args=(Lambda, Omega_m0, Omega_K))
+
+sofa = odeint(s_a, s0, a, args = (Omega_m0, Omega_K, Lambda, a0))
+
+"""
+mpl.plot(z, result, linewidth = 0.75, label = "s")
+mpl.xlabel("z(t)")
+mpl.ylabel("s(z)")
+mpl.legend()
+#mpl.yscale("log")
+mpl.xscale("log")
+mpl.show()
+"""
+
+mpl.plot(a, sofa, linewidth = 0.75, label = r"s, $\Omega =$ (%.1f, %.1f, %.1f) = %.1f " %(Omega_m0, Omega_K, Lambda, omega))
+mpl.xlabel("a(t)")
+mpl.ylabel("s(a)")
+mpl.title(r"$s_0=2.0$")
+mpl.legend()
+mpl.yscale("log")
+mpl.xscale("log")
+mpl.show()
+

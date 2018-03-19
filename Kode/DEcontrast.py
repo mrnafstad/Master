@@ -25,136 +25,12 @@ def d_lin():
 
 """
 
-H_0 = 1.	#km/s/Mpc
 
 def expansionfunc(a, Omega_m0, Omega_K, Lambda):
 
 	E = np.sqrt(Omega_m0/a**3 + Omega_K/a**2 + Lambda/3.)
 
-	dE_E = - (3./2. *Omega_m0/a**4 + Omega_K/a**3)/(Omega_m0/a**3 + Omega_K/a**2 + Lambda/3.)
-
-	return [E, dE_E]
-
-	
-
-"""
-def function(x, t, Lambda, Omega_m0):
-	#Es(t, Lambda, Omega_m0)
-	#a = 3*(np.exp(-t) - Es[1]/2.)
-	#b = 4/3.
-	#c = 4/3. * Omega_m0*np.exp(-5*t)/Es[0]
-	d = x[0]
-	d1 = x[1]
-	deltadd = [[],[]]
-	deltadd[0] = d
-	deltadd[1] = - 3*np.exp(-t)*(1 - Omega_m0/2./(Omega_m0*np.exp(-3*t) + Lambda/3.))*d1 + 4./3*d1**2/(1+d) + 4./3 * Omega_m0*np.exp(-5*t)/(np.sqrt(Omega_m0*np.exp(-3*t) + Lambda/3.))**2*d*(1+d)
-
-	return deltadd
-"""
-
-
-def nonlinear(x, a, Lambda, Omega_m0, Omega_K):
-	#Es(t, Lambda, Omega_m0)
-	#a = 3*(np.exp(-t) - Es[1]/2.)
-	#b = 4/3.
-	#c = 4/3. * Omega_m0*np.exp(-5*t)/Es[0]
-
-	Es = expansionfunc(a, Omega_m0, Omega_K, Lambda)
-	E = Es[0]
-	dEdtE = Es[1]
-
-	d = x[0]
-	d1 = x[1]
-	deltadd = [[],[]]
-	deltadd[0] = d1
-	deltadd[1] = - (3./a + dEdtE)*d1 + 4./3.*d1**2/(1+d) + 4./3. * float(Omega_m0)/a**5/E**2*d*(1+d)
-
-	return deltadd
-
-
-
-def linear(x, a, Lambda, Omega_m0, Omega_K):
-
-	Es = expansionfunc(a, Omega_m0, Omega_K, Lambda)
-	E = Es[0]
-	dEdtE = Es[1]
-
-	d = x[0]
-	d1 = x[1]
-	deltadd = [[],[]]
-	deltadd[0] = d1
-	deltadd[1] = - (3./a + dEdtE)*d1 + 4./3 * float(Omega_m0)/a**5/E**2*d
-
-	return deltadd
-
-eps = 1.63e-5
-N = 100000
-
-a = np.linspace(eps, 1.1, N)
-t = np.log(a)
-
-Lambda = float(sys.argv[1])
-Omega_m0 = float(sys.argv[2])
-
-if len(sys.argv) == 3:
-	Omega_K = 1 - Omega_m0 - Lambda
-else:
-	Omega_K = float(sys.argv[3])
-
-print Omega_K
-
-delta_0 = 1e-4
-delta1_1 = 5e-5
-
-
-#z2 = odeint(function, [0, 1e-5], t, args=(Lambda, Omega_m0)
-
-deltanl = odeint(nonlinear, [delta_0, delta1_1], a, args=(Lambda, Omega_m0, Omega_K))
-
-deltalin = odeint(linear, [delta_0, delta1_1], a, args=(Lambda, Omega_m0, Omega_K))
-
-print deltanl[-1,0], deltalin[-1,0]
-
-delta_c = np.array([1.686]*N)
-
-
-
-mpl.plot(a, delta_c, "--c", linewidth = 0.75, label=r"$\delta _c = 1.686$")
-
-mpl.plot(a, deltanl[:, 0], "--b", linewidth = 0.75, label = r"$\delta _{non-linear}$")
-mpl.plot(a, deltalin[:, 0], "-y", linewidth = 0.75, label = r"$\delta _{linear}$")
-mpl.xlabel("a(t)")
-mpl.ylabel(r" $ \delta $")
-mpl.legend()#[r"$\delta _c = 1.686$", r"$\delta _{non-linear}$", r"$\delta _{linear}$"])
-mpl.xscale("log")
-mpl.yscale("log")
-
-mpl.show()
-
-"""
-mpl.plot(a, delta_c, "--c", linewidth = 0.75)
-
-mpl.plot(a, deltanl[:, 1], "--b", linewidth = 0.75)
-mpl.plot(a, deltalin[:, 1], "--g", linewidth = 0.75)
-mpl.xlabel("a(t)")
-mpl.ylabel(r" $ \delta $")
-mpl.legend([r"$\delta _c$", r"$\delta _{non-linear}$", r"$\delta _{linear}$"])
-mpl.xscale("log")
-mpl.yscale("log")
-
-mpl.show()
-"""
-
-#Rewrite the following in terms of d/dx, rather than d/da!
-
-#Er noe bug her!
-
-
-def expansionfunc(a, Omega_m0, Omega_K, Lambda):
-
-	E = np.sqrt(Omega_m0/a**3 + Omega_K/a**2 + Lambda/3.)
-
-	dE_E = - (3./2. *Omega_m0/a**4 + Omega_K/a**3)/(Omega_m0/a**3 + Omega_K/a**2 + Lambda/3.)
+	dE_E = - (3./2. *Omega_m0/a**4 + Omega_K/a**3)/(Omega_m0/a**3 + Omega_K/a**2 + Lambda)
 
 	return [E, dE_E]
 
@@ -182,23 +58,28 @@ def nonlinear(x, y, Lambda, Omega_m0, Omega_K):
 	#b = 4/3.
 	#c = 4/3. * Omega_m0*np.exp(-5*t)/Es[0]
 
-	Es = expansionfunc(x, Omega_m0, Omega_K, Lambda)
-	E = Es[0]
-	dEdtE = Es[1]
+	# Skriv om til d/dx !! skriv om dEda til dE/dx
 
 	a = np.exp(y)
+
+	Es = expansionfunc(a, Omega_m0, Omega_K, Lambda)
+	
+	E = Es[0]
+	dEdtE = Es[1]
 
 	d = x[0]
 	d1 = x[1]
 	deltadd = [[],[]]
 	deltadd[0] = d1
-	deltadd[1] = - (2 + dEdtE)*d1 + 4./3.*d1**2/(1+d) + 4./3. * float(Omega_m0)/a**3/E**2*d*(1+d)
+	deltadd[1] = - (2. + a*dEdtE)*d1 + 4./3.*d1**2/(1+d) + 4./3. * float(Omega_m0)/a**3/E**2*d*(1+d)
 
 	return deltadd
 
 
 
-def linear(x, a, Lambda, Omega_m0, Omega_K):
+def linear(x, y, Lambda, Omega_m0, Omega_K):
+
+	a = np.exp(y)
 
 	Es = expansionfunc(a, Omega_m0, Omega_K, Lambda)
 	E = Es[0]
@@ -208,50 +89,69 @@ def linear(x, a, Lambda, Omega_m0, Omega_K):
 	d1 = x[1]
 	deltadd = [[],[]]
 	deltadd[0] = d1
-	deltadd[1] = - (3./a + dEdtE)*d1 + 4./3 * float(Omega_m0)/a**5/E**2*d
+	deltadd[1] = - (2 + a*dEdtE)*d1 + 4./3 * float(Omega_m0)/a**3/E**2*d
 
 	return deltadd
 
-eps = 1.63e-5
+eps = float(sys.argv[4])
 N = 100000
 
-x = np.linspace(-7, 0, N)
+y = np.linspace(eps, 1e-15, N)
 
 
-Lambda = float(sys.argv[1])
-Omega_m0 = float(sys.argv[2])
+Lambda = 0.74
+Omega_m0 = 0.26
 
-if len(sys.argv) == 3:
-	Omega_K = 1 - Omega_m0 - Lambda
-else:
-	Omega_K = float(sys.argv[3])
+Omega_K = 1
 
-print Omega_K
 
-delta_0 = 1e-4
+
+delta_0 = np.linspace( float(sys.argv[2]), float(sys.argv[1]), int(sys.argv[3]) )
 delta1_1 = 5e-5
 
 
 #z2 = odeint(function, [0, 1e-5], t, args=(Lambda, Omega_m0)
+"""
+deltanl = odeint(nonlinear, [delta_0[0], delta1_1], y, args=(Lambda, Omega_m0, Omega_K))
 
-deltanl2 = odeint(nonlinear, [delta_0, delta1_1], x, args=(Lambda, Omega_m0, Omega_K))
+deltalin = odeint(linear, [delta_0[0], delta1_1], y, args=(Lambda, Omega_m0, Omega_K))
 
-deltalin2 = odeint(linear, [delta_0, delta1_1], x, args=(Lambda, Omega_m0, Omega_K))
-
-print deltanl2[-1,0], deltalin2[-1,0]
+print deltanl[-1,0], deltalin[-1,0]
 
 delta_c = np.array([1.686]*N)
 
 
 
-mpl.plot(x, delta_c, "--c", linewidth = 0.75, label=r"$\delta _c = 1.686$")
+mpl.plot(y, delta_c, "--c", linewidth = 0.75, label=r"$\delta _c = 1.686$")
 
-mpl.plot(x, deltanl2[:, 0], "--b", linewidth = 0.75, label = r"$\delta _{non-linear}$")
-mpl.plot(x, deltalin2[:, 0], "-y", linewidth = 0.75, label = r"$\delta _{linear}$")
-mpl.xlabel("a(t)")
+mpl.plot(y, deltanl[:, 0], "--b", linewidth = 0.75, label = r"$\delta _{non-linear}$")
+mpl.plot(y, deltalin[:, 0], "-y", linewidth = 0.75, label = r"$\delta _{linear}$")
+mpl.xlabel("x = ln(a)")
 mpl.ylabel(r" $ \delta $")
 mpl.legend()#[r"$\delta _c = 1.686$", r"$\delta _{non-linear}$", r"$\delta _{linear}$"])
-mpl.xscale("log")
-mpl.yscale("log")
 
+
+mpl.show()
+"""
+for i in range(len(delta_0)):
+
+	deltanl = odeint(nonlinear, [delta_0[i], delta1_1], y, args=(Lambda, Omega_m0, Omega_K))
+
+	mpl.plot(y, deltanl[:, 0], "--", linewidth = 0.75, label = r"$\delta _{nl, i} =$ %.2e" % delta_0[i])
+
+for i in range(len(delta_0)):
+
+	deltalin = odeint(linear, [delta_0[i], delta1_1], y, args=(Lambda, Omega_m0, Omega_K))
+
+	mpl.plot(y, deltalin[:, 0], "-", linewidth = 0.75, label = r"$\delta _{i} =$ %.2e" % delta_0[i])
+
+delta_c = np.array([1.686]*N)
+
+mpl.plot(y, delta_c, "--c", linewidth = 0.75, label=r"$\delta _c = 1.686$")
+
+mpl.xlabel("x = ln(a)")
+mpl.ylabel(r"$\delta$")
+mpl.legend( loc = 2 )
+mpl.title(r"$\delta (x)$, $x_0 =$ %.2f" % eps)
+mpl.grid( True )
 mpl.show()

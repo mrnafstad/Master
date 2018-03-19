@@ -29,13 +29,13 @@ def virialcheck(y, mix, Omega_m0, Omega_K, Lambda, delta_i, runer):
 	rover = rvir/r[0]
 	avir = a[p]
 	
-	"""
+
 	if collapse :
-		print "It collapses!"
+		print "It collapses! delta_i = %.6e" % delta_i
 
 	else:
-		print "It does not collapse.."
-	"""
+		print "It does not collapse.. delta_i = %.6e" % delta_i
+
 	if rvir:
 		#print " %4.4e | %5.4e | %5.4e" % (rover, avir, delta_i)
 
@@ -63,16 +63,16 @@ def varyinitial():
 
 	runer = True
 
-	M = 1000
+	M = 200
 	N = 500000
 
 	Lambda = 0.74
 	Omega_m0 = 0.26
 	Omega_K = 1 - Omega_m0 - Lambda
 
-	delta_i = 1.7e-3
+	delta_i = 1.15e-3
 
-	y0 = np.linspace(-10, -6, M)
+	y0 = np.linspace(-8.5, -7, M)
 
 	avir_arr = np.zeros(M)
 
@@ -114,7 +114,7 @@ def varyinitial():
 eps = 1.63e-5
 N = 500000
  
-y0 = float(sys.argv[3])					#-2 might be a decent number, roughly -7 corresponds to recombination
+y0 = float(sys.argv[4])					#-2 might be a decent number, roughly -7 corresponds to recombination
 
 y = np.linspace( y0, -1e-15, N)
 
@@ -125,15 +125,17 @@ Omega_K = 1 - Omega_m0 - Lambda
 
 delta_i_max = float(sys.argv[1])
 
-delta_int = int(sys.argv[2])
+delta_i_min = float(sys.argv[2])
 
-delta_i = np.linspace(0, delta_i_max, delta_int)
+delta_int = int(sys.argv[3])
+
+delta_i = np.linspace(delta_i_min, delta_i_max, delta_int)
 
 r0 = np.exp(y0)
 drdx0 = np.exp(y0)
 
 virialization = False
-if len(sys.argv) == 6:
+if len(sys.argv) == 7:
 	virialization = True
 	print "You chose virialization!"
 
@@ -144,14 +146,22 @@ print "%4s | %5s" % ("r_vir/r_i", "a_vir")
 
 runer = False
 
+print "EdS", "----"*5
 radius = odeint(r, [r0, drdx0], y, args = (Omega_m0, Omega_K, 0, r0, np.mean(delta_i)))
 
 rad, avirr = virialcheck(y, radius, Omega_m0, Omega_K, 0, np.mean(delta_i), runer)
 
 
-mpl.plot(y, rad, ":b", linewidth = 0.75, label = r"EdS, $\delta_i = 0$") 		#TypeError: tuple indices must be integers, not tuple
+mpl.plot(y, rad, ":b", linewidth = 0.75, label = r"EdS, $\delta_i =$ %.5e" % np.mean(delta_i)) 		
 
+print "Background", "----"*5
+backrad = odeint(r, [r0, drdx0], y, args = (Omega_m0, Omega_K, r0, Lambda, 0))
 
+radback, acir = virialcheck(y, backrad, Omega_m0, Omega_K, Lambda, 0, runer)
+
+mpl.plot(y, radback, "-c", linewidth = 0.75, label = "Background")
+
+print "Loop", "----"*5
 
 
 
@@ -161,7 +171,7 @@ mpl.plot(y, rad, ":b", linewidth = 0.75, label = r"EdS, $\delta_i = 0$") 		#Type
 
 
 
-if len(sys.argv) >= 5:
+if len(sys.argv) >= 6:
 	#Run through different values of the initial overdensity and plot together
 	for i in range(len(delta_i)):
 		
@@ -170,22 +180,11 @@ if len(sys.argv) >= 5:
 		if virialization:
 			rad, a_virr = virialcheck(y, sofa, Omega_m0, Omega_K, Lambda, delta_i[i], runer)
 
-			if i == 0:
-
-				mpl.plot(y, rad, "-c", linewidth = 0.75, label = r"$\delta_{i} =$ %.1e" % delta_i[i])
-
-			else:
-
-				mpl.plot(y, rad, "-.", linewidth = 0.75, label = r"$\delta_{i} =$ %.1e" % delta_i[i])
+			mpl.plot(y, rad, "-.", linewidth = 0.75, label = r"$\delta_{i} =$ %.5e" % delta_i[i])
 
 		else:
-			if i == 0:
-
-				mpl.plot(y, sofa, "-c", linewidth = 0.75, label = r"$\delta_{i} =$ %.1e" % delta_i[i])
-
-			else:
-
-				mpl.plot(y, sofa, "-.", linewidth = 0.75, label = r"$\delta_{i} =$ %.1e" % delta_i[i])
+			
+			mpl.plot(y, sofa, "-.", linewidth = 0.75, label = r"$\delta_{i} =$ %.5e" % delta_i[i])
 
 
 		#print delta_i[i]
@@ -218,7 +217,7 @@ else:
 		y = np.linspace( y0_arr[i], -1e-10, N)
 		sofa = odeint(r, [r0, drdx0], y, args = (Omega_m0, Omega_K, Lambda, r0, delta__i))	
 
-		mpl.plot(y, sofa[:,0], "--", linewidth = 0.75, label = r"$x_0 =$ %.1f, $\delta_i =$ %.2f" % (y0_arr[i], delta__i))
+		mpl.plot(y, sofa[:,0], "--", linewidth = 0.75, label = r"$x_0 =$ %.1f, $\delta_i =$ %.4f" % (y0_arr[i], delta__i))
 
 
 
@@ -282,4 +281,4 @@ mpl.title(r"$x_0 =$ %0.2f, varying values of $\delta_i$" % y0)
 mpl.show()
 """
 
-varyinitial()
+#varyinitial()

@@ -11,9 +11,15 @@ def virialcheck(y, mix, Omega_m0, Omega_K, Lambda, delta_i, runer):
 	r = mix[:,0]
 
 	a = np.exp(y)
+	s = 0
 	p = 0
 	rvir = False
 	collapse = False
+
+	controll = True
+
+	First = True
+
 	for i in range(len(rdot)):
 
 		U = r[i]*r[i]/(Omega_m0/a[i]**3 + Omega_K/a[i]**2 + Lambda)*3./5.*(Omega_m0*(1+delta_i)/(2*r[i]**3) - Lambda) 
@@ -23,12 +29,8 @@ def virialcheck(y, mix, Omega_m0, Omega_K, Lambda, delta_i, runer):
 			collapse = True
 
 		if T <= U:
-			rvir = r[i]
+			controll = False
 			p = i
-
-	rover = rvir/r[0]
-	avir = a[p]
-	
 
 	if collapse :
 		print "It collapses! delta_i = %.6e" % delta_i
@@ -36,8 +38,27 @@ def virialcheck(y, mix, Omega_m0, Omega_K, Lambda, delta_i, runer):
 	else:
 		print "It does not collapse.. delta_i = %.6e" % delta_i
 
+	if p >= 1:
+		rvir = r[p]
+	rover = rvir/r[0]
+	avir = a[p]
+
+	odensity = Omega_m0*(avir/rvir)**3*(1 + delta_i)
+	s = np.argmax(r)
+	rmax = r[s]
+	amax = a[s]
+
+	odensitymax = Omega_m0*(amax/rmax)**3*(1 + delta_i)
+		
+	print "rho_vir = {:.4f}, a_vir = {:.2e}, rvir = {:.2e}".format(odensity, avir, rvir)
+
+	print "rho_max = {:.4f}, a_max = {:.2e}, rmax = {:.2e}".format(odensitymax, amax, rmax), s
+
+
+
+
 	if rvir:
-		#print " %4.4e | %5.4e | %5.4e" % (rover, avir, delta_i)
+			#print " %4.4e | %5.4e | %5.4e" % (rover, avir, delta_i)
 
 		k = p
 		while k + 1 <= len(r):
@@ -46,6 +67,10 @@ def virialcheck(y, mix, Omega_m0, Omega_K, Lambda, delta_i, runer):
 	elif runer==True:
 		print "It does not collapse!", y[0]
 	return r, avir
+
+#def virbyacceleration():
+
+
 
 
 def r(x, y, Omega_m0, Omega_K, Lambda, r_i, delta_i):

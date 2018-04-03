@@ -188,9 +188,9 @@ for i in range(len(y0_array)):
 
 	dmax_array[i] = dmax
 
+	print "A density between {:.6e} and {:.6} collapse at redshift {:.2e} (for the highest value)".format(dmin, dmax, np.exp(-colltime) - 1)
 
 
-print "A density between {:.6e} and {:.6} collapse at redshift {:.2e} (for the highest value)".format(dmin, dmax, np.exp(-colltime) - 1)
 
 
 mpl.plot(y0_array, dmax_array, label = r"$\delta_i (y_0)$")

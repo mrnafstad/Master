@@ -99,8 +99,8 @@ N = 100000
 y = np.linspace(eps, 1e-15, N)
 
 
-Lambda = 0.74
-Omega_m0 = 0.26
+Lambda = 0
+Omega_m0 = 1
 
 Omega_K = 1
 

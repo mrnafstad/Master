@@ -42,7 +42,7 @@ def virialcheck(y, mix, Omega_m0, Omega_K, Lambda, delta_i, runer):
 		rvir = r[p]
 	rover = rvir/r[0]
 	avir = a[p]
-
+	"""
 	odensity = Omega_m0*(avir/rvir)**3*(1 + delta_i)
 	s = np.argmax(r)
 	rmax = r[s]
@@ -53,7 +53,18 @@ def virialcheck(y, mix, Omega_m0, Omega_K, Lambda, delta_i, runer):
 	print "rho_vir = {:.4f}, a_vir = {:.2e}, rvir = {:.2e}".format(odensity, avir, rvir)
 
 	print "rho_max = {:.4f}, a_max = {:.2e}, rmax = {:.2e}".format(odensitymax, amax, rmax), s
+	"""
+	if rvir:
+		odensity = (Omega_m0*(1+delta_i)/rvir**3 + Lambda)/(Omega_m0/avir**3 + Lambda)
+		s = np.argmax(r)
+		rmax = r[s]
+		amax = a[s]
 
+		odensitymax = (Omega_m0*(1+delta_i)/rmax**3 + Lambda)/(Omega_m0/amax**3 + Lambda)
+			
+		print "rho_vir = {:.4f}, a_vir = {:.2e}, rvir = {:.2e}".format(odensity, avir, rvir)
+
+		print "rho_max = {:.4f}, a_max = {:.2e}, rmax = {:.2e}".format(odensitymax, amax, rmax), s
 
 
 
@@ -172,9 +183,9 @@ print "%4s | %5s" % ("r_vir/r_i", "a_vir")
 runer = False
 
 print "EdS", "----"*5
-radius = odeint(r, [r0, drdx0], y, args = (Omega_m0, Omega_K, 0, r0, np.mean(delta_i)))
+radius = odeint(r, [r0, drdx0], y, args = (Omega_m0, 0, 0, r0, np.mean(delta_i)))
 
-rad, avirr = virialcheck(y, radius, Omega_m0, Omega_K, 0, np.mean(delta_i), runer)
+rad, avirr = virialcheck(y, radius, Omega_m0, 0, 0, np.mean(delta_i), runer)
 
 
 mpl.plot(y, rad, ":b", linewidth = 0.75, label = r"EdS, $\delta_i =$ %.5e" % np.mean(delta_i)) 		

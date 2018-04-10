@@ -24,15 +24,19 @@ def virialcheck(y, mix, Omega_m0, Omega_K, Lambda, delta_i, runer):
 			collapse = True
 			first = False
 			t = i
-		
-		else:
-			U = r[i]*r[i]/(Omega_m0/a[i]**3 + Omega_K/a[i]**2 + Lambda)*3./5.*(Omega_m0*(1+delta_i)/(2*r[i]**3) - Lambda) 
-			T = rdot[i]*rdot[i]
 
+		
+		
+		U = r[i]*r[i]/(Omega_m0/a[i]**3 + Omega_K/a[i]**2 + Lambda)*3./5.*(Omega_m0*(1+delta_i)/(2*r[i]**3) - Lambda) 
+		T = rdot[i]*rdot[i]
+		
+
+		
 
 		if T <= U:
 			rvir = r[i]
 			p = i
+
 
 	rover = rvir/r[0]
 	avir = a[p]
@@ -41,7 +45,7 @@ def virialcheck(y, mix, Omega_m0, Omega_K, Lambda, delta_i, runer):
 	if rvir:
 
 		k = p
-		print 
+		print "here?"
 		while k + 1 <= len(r):
 			r[k] = rvir
 			k += 1
@@ -71,7 +75,7 @@ def findcoll(delta_max, delta_min, y0):
 	drdx0 = np.exp(y0)
 
 
-	for i in range(20):
+	for i in range(5):
 
 		delta_mid = (delta_max + delta_min)/2.0
 		#print "dmin: {:.15e}, dmax: {:.15e}".format(delta_min, delta_max)
@@ -111,7 +115,7 @@ Omega_K = 1 - Omega_m0 - Lambda
 
 runer = False
 
-m = 50
+m = 5
 
 y0_array = np.linspace(-11, -7.5, m)
 

@@ -32,11 +32,7 @@ def virialcheck(y, mix, Omega_m0, Omega_K, Lambda, delta_i, runer):
 			controll = False
 			p = i
 
-	if collapse :
-		print "It collapses! delta_i = %.6e" % delta_i
 
-	else:
-		print "It does not collapse.. delta_i = %.6e" % delta_i
 
 	if p >= 1:
 		rvir = r[p]
@@ -62,11 +58,11 @@ def virialcheck(y, mix, Omega_m0, Omega_K, Lambda, delta_i, runer):
 
 		odensitymax = (Omega_m0*(1+delta_i)/rmax**3 + Lambda)/(Omega_m0/amax**3 + Lambda)
 			
-		print "rho_vir = {:.4f}, a_vir = {:.2e}, rvir = {:.2e}".format(odensity, avir, rvir)
-
-		print "rho_max = {:.4f}, a_max = {:.2e}, rmax = {:.2e}".format(odensitymax, amax, rmax), s
 
 
+	
+
+		file.write("        {:5.10f} 	  | 		 {:5.10e}    	|     {:5.10e}  	|	{:5.10f}	|	{}\n".format(odensity, odensitymax, rvir/rmax, avir/amax, collapse))
 
 	if rvir:
 			#print " %4.4e | %5.4e | %5.4e" % (rover, avir, delta_i)
@@ -79,7 +75,21 @@ def virialcheck(y, mix, Omega_m0, Omega_K, Lambda, delta_i, runer):
 		print "It does not collapse!", y[0]
 	return r, avir
 
-#def virbyacceleration():
+def inertia(x, y, rho, g, H2, seccondfriedman, firstterm, seccondterm):
+	I = x[0]
+	dIdy = x[1]
+	a = np.exp(y)
+	C1 = firstterm
+	C2 = seccondterm
+	
+
+	II = [[],[]]
+	II[0] = dIdy
+	II[1] = C1 + H2**-1*C2 - (seccondfriedman + H2)/H2*dIdy
+
+
+#def virbyinertia():
+
 
 
 
@@ -154,10 +164,14 @@ y0 = float(sys.argv[4])					#-2 might be a decent number, roughly -7 corresponds
 
 y = np.linspace( y0, -1e-15, N)
 
+file = open("values.txt", "w")
+
+file.write("Overdensity at virialization     Overdensity at maximum radius		Radius ratio 		Time ratio \n")
+
 Lambda = 0.74
 Omega_m0 = 0.26
 
-Omega_K = 1 - Omega_m0 - Lambda
+Omega_K = 0
 
 delta_i_max = float(sys.argv[1])
 
@@ -226,7 +240,7 @@ if len(sys.argv) >= 6:
 		#print delta_i[i]
 
 
-
+	file.close()
 
 	mpl.xlabel("x = ln(a)")
 	mpl.ylabel("r(a)")

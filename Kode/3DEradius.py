@@ -6,7 +6,7 @@ from itertools import cycle
 
 H0 = 2.2685455*10**12	#km/s/Mpc
 
-def virialcheck(y, mix, Omega_m0, Omega_K, Lambda, delta_i, runer):
+def virialcheck(y, mix, Omega_m0, Omega_K, Lambdavar, delta_i, runer):
 	rdot = mix[:,1]
 	r = mix[:,0]
 
@@ -16,19 +16,28 @@ def virialcheck(y, mix, Omega_m0, Omega_K, Lambda, delta_i, runer):
 	rvir = False
 	collapse = False
 
+	s = np.argmax(r)
+	rmax = r[s]
+	amax = a[s]
+
+	U = np.zeros(len(r))
+
+	T = np.zeros(len(r))
+
 	controll = True
 
 	First = True
 
 	for i in range(len(rdot)):
 
-		U = r[i]*r[i]/(Omega_m0/a[i]**3 + Omega_K/a[i]**2 + Lambda)*3./5.*(Omega_m0*(1+delta_i)/(2*r[i]**3) - Lambda) 
-		T = rdot[i]*rdot[i]
+		U[i] = r[i]*r[i]/(Omega_m0/a[i]**3 + Lambdavar)*(3.0*Omega_m0*(1+delta_i)/(5.0*r[i]**3) - 2*Lambdavar) 
+		T[i] = rdot[i]*rdot[i]
 
 		if r[i] <= 0:
 			collapse = True
 
-		if T <= U:
+		if T[i] <= U[i]:
+			#Error found in virialisation crit, but it did not entirely solve the problem. Still 1/10 off
 			controll = False
 			p = i
 
@@ -51,12 +60,10 @@ def virialcheck(y, mix, Omega_m0, Omega_K, Lambda, delta_i, runer):
 	print "rho_max = {:.4f}, a_max = {:.2e}, rmax = {:.2e}".format(odensitymax, amax, rmax), s
 	"""
 	if rvir:
-		odensity = (Omega_m0*(1+delta_i)/rvir**3 + Lambda)/(Omega_m0/avir**3 + Lambda)
-		s = np.argmax(r)
-		rmax = r[s]
-		amax = a[s]
+		odensity = (Omega_m0*(1+delta_i)/rvir**3 + Lambdavar)/(Omega_m0/avir**3 + Lambdavar)
 
-		odensitymax = (Omega_m0*(1+delta_i)/rmax**3 + Lambda)/(Omega_m0/amax**3 + Lambda)
+
+		odensitymax = (Omega_m0*(1+delta_i)/rmax**3 + Lambdavar)/(Omega_m0/amax**3 + Lambdavar)
 			
 
 
@@ -73,19 +80,16 @@ def virialcheck(y, mix, Omega_m0, Omega_K, Lambda, delta_i, runer):
 			k += 1
 	elif runer==True:
 		print "It does not collapse!", y[0]
-	return r, avir
+	"""
+	mpl.plot(y, U, "r--", linewidth = 0.75, label = "U")
+	mpl.plot(y, T, "b--", linewidth = 0.75, label = "T")
+	mpl.legend()
+	mpl.title(delta_i)
+	mpl.yscale("log")
+	mpl.show()
+	"""
+	return r, avir, U, T
 
-def inertia(x, y, rho, g, H2, seccondfriedman, firstterm, seccondterm):
-	I = x[0]
-	dIdy = x[1]
-	a = np.exp(y)
-	C1 = firstterm
-	C2 = seccondterm
-	
-
-	II = [[],[]]
-	II[0] = dIdy
-	II[1] = C1 + H2**-1*C2 - (seccondfriedman + H2)/H2*dIdy
 
 
 #def virbyinertia():
@@ -105,54 +109,15 @@ def r(x, y, Omega_m0, Omega_K, Lambda, r_i, delta_i):
 	return rr
 
 
-def varyinitial():
+def EdSr(x, y, Omega_m0, r_i, delta_i):
+	r = x[0]
+	drdy = x[1]
+	a = np.exp(y)
+	rr = [[],[]]
+	rr[0] = drdy
+	rr[1] = -(1 + delta_i)*a**3/(2.0*r**2) + 3.0/2.0*drdy	
 
-	runer = True
-
-	M = 200
-	N = 500000
-
-	Lambda = 0.74
-	Omega_m0 = 0.26
-	Omega_K = 1 - Omega_m0 - Lambda
-
-	delta_i = 1.15e-3
-
-	y0 = np.linspace(-8.5, -7, M)
-
-	avir_arr = np.zeros(M)
-
-	k = 0
-	for i in range(len(y0)):
-		yi = y0[i]
-		k += 1
-		if k == 10:
-			percentage = float(i)/float(M)*100
-			print "Still going strong at %.0f%%" % percentage
-			k = 0
-		
-		r0 = np.exp(yi)
-		drdx0 = np.exp(yi)
-		y = np.linspace(yi, -1e-15, N)
-
-		radius = odeint(r, [r0, drdx0], y, args = (Omega_m0, Omega_K, Lambda, r0, delta_i))
-
-		rad, avir_arr[i] = virialcheck(y, radius, Omega_m0, Omega_K, Lambda, delta_i, runer)
-
-	print len(avir_arr)
-
-	mpl.plot(y0, avir_arr, "-.", linewidth = 0.75, label =  r"$a_{vir} (y_0)$")
-	mpl.xlabel(r"$y_0$")
-	mpl.ylabel(r"$a_{vir}$")
-	mpl.legend()
-	mpl.show()
-
-
-
-
-
-
-
+	return rr
 
 
 
@@ -166,7 +131,7 @@ y = np.linspace( y0, -1e-15, N)
 
 file = open("values.txt", "w")
 
-file.write("Overdensity at virialization     Overdensity at maximum radius		Radius ratio 		Time ratio \n")
+file.write("Overdensity at virialization     Overdensity at maximum radius		Radius ratio 		        Time ratio \n")
 
 Lambda = 0.74
 Omega_m0 = 0.26
@@ -180,6 +145,9 @@ delta_i_min = float(sys.argv[2])
 delta_int = int(sys.argv[3])
 
 delta_i = np.linspace(delta_i_min, delta_i_max, delta_int)
+
+kinetic = [0, 0, 0, 0, 0, 0]
+potential = [0, 0, 0, 0, 0, 0]
 
 r0 = np.exp(y0)
 drdx0 = np.exp(y0)
@@ -196,18 +164,30 @@ print "%4s | %5s" % ("r_vir/r_i", "a_vir")
 
 runer = False
 
+delta_EdS = 1e-3
+
+
+
+
 print "EdS", "----"*5
-radius = odeint(r, [r0, drdx0], y, args = (Omega_m0, 0, 0, r0, np.mean(delta_i)))
+radius = odeint(r, [r0, drdx0], y, args = (Omega_m0, 0, 0, r0, delta_EdS))
 
-rad, avirr = virialcheck(y, radius, Omega_m0, 0, 0, np.mean(delta_i), runer)
+rad, avirr, potential[0], kinetic[0] = virialcheck(y, radius, Omega_m0, 0, 0, delta_EdS, runer)
 
 
-mpl.plot(y, rad, ":b", linewidth = 0.75, label = r"EdS, $\delta_i =$ %.5e" % np.mean(delta_i)) 		
+mpl.plot(y, rad, ":b", linewidth = 0.75, label = r"EdS, $\delta_i =$ %.5e" % delta_EdS )
+
+radius = odeint(EdSr, [r0, drdx0], y, args = (Omega_m0, r0, delta_EdS))
+
+rad, avirr, potential[0], kinetic[0] = virialcheck(y, radius, Omega_m0, 0, 0, delta_EdS, runer)
+
+
+mpl.plot(y, rad, ":b", linewidth = 0.75, label = r"EdS, $\delta_i =$ %.5e" % delta_EdS )		
 
 print "Background", "----"*5
-backrad = odeint(r, [r0, drdx0], y, args = (Omega_m0, Omega_K, r0, Lambda, 0))
+backrad = odeint(r, [r0, drdx0], y, args = (Omega_m0, Omega_K, Lambda, r0, 0))
 
-radback, acir = virialcheck(y, backrad, Omega_m0, Omega_K, Lambda, 0, runer)
+radback, acir, pot, kin = virialcheck(y, backrad, Omega_m0, Omega_K, Lambda, 0, runer)
 
 mpl.plot(y, radback, "-c", linewidth = 0.75, label = "Background")
 
@@ -228,7 +208,7 @@ if len(sys.argv) >= 6:
 		sofa = odeint(r, [r0, drdx0], y, args = (Omega_m0, Omega_K, Lambda, r0, delta_i[i]))
 
 		if virialization:
-			rad, a_virr = virialcheck(y, sofa, Omega_m0, Omega_K, Lambda, delta_i[i], runer)
+			rad, a_virr, potential[i+1], kinetic[i+1] = virialcheck(y, sofa, Omega_m0, Omega_K, Lambda, delta_i[i], runer)
 
 			mpl.plot(y, rad, "-.", linewidth = 0.75, label = r"$\delta_{i} =$ %.5e" % delta_i[i])
 
@@ -249,6 +229,20 @@ if len(sys.argv) >= 6:
 	mpl.title(r"$x_0 =$ %0.2f, varying values of $\delta_i$" % y0)
 
 	mpl.show()
+
+	for i in range(len(potential)):
+		if i == 0:
+			mpl.plot(y, potential[i], "c-.", linewidth = 0.75, label = "U, EdS")
+			mpl.plot(y, kinetic[i], "c-", linewidth = 0.75, label = "T, EdS")
+			mpl.plot(y, potential[i] + kinetic[i], linewidth = 0.75, label = r"$E_{tot}$")
+
+		else:
+			mpl.plot(y, potential[i], "g-.", linewidth = 0.75, label = "U, {:.6e}".format(delta_i[i-1]))
+			mpl.plot(y, kinetic[i], "g-", linewidth = 0.75, label = "T, {:.6e}".format(delta_i[i-1]))
+			mpl.plot(y, potential[i] + kinetic[i], "b--", linewidth = 0.75, label = r"$E_{tot}$")	
+		mpl.legend()
+		mpl.yscale("log")
+		mpl.show()
 
 else:
 #Want to run through different values of y0 at

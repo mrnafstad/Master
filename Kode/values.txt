@@ -1,1 +1,3 @@
 Overdensity at virialization     Overdensity at maximum radius		Radius ratio 		        Time ratio 
+gen        469080689837621421132212076544.0000000000 	  | 		 5.5516925554e+00    	|     3.6175469784e-10  	|	1.5874067727	|	True
+        587337475241155517408985743360.0000000000 	  | 		 5.5516925554e+00    	|     3.6175469784e-10  	|	1.7109406621	|	False

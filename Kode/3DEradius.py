@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pylab as mpl
-from scipy.integrate import odeint
+from scipy.integrate import odeint, quad
 import sys
 from itertools import cycle
 
@@ -94,22 +94,67 @@ def virialcheck(y, mix, Omega_m0, Omega_K, Lambdavar, delta_i, runer):
 	return r, avir, U, T
 
 
-
-
-def LCDMdensity(Omega_m0, delta_i, r):
-
-	return Omega_m0*(1+delta_i)/r**3
-
-
-def LCDM_constant():
-
-	return 0.74
+ 
 
 
 
 
+def LCDM_Kinetic(rmax, rdot, a, delta_i):
 
-def general_viraial(y, mix, Omega_m0, delta_i, Kinetic, Potential, acceleration):
+	Omega_m0 = 0.26
+
+	density = Omega_m0*(1+delta_i)/rmax**3
+
+	x2 = lambda r: density*rdot**2*r**2
+
+	kin = quad(x2, 0, rmax)
+
+	return kin[0]
+
+
+def LCDM_Potential(rmax, rdot, a, delta_i, EdS):
+
+	if EdS:
+		Omega_m0 = 1.0
+		Lambda = 0.0
+
+	else:
+		Omega_m0 = 0.26
+		Lambda = 0.74
+		
+	density = Omega_m0*(1+delta_i)/rmax**3
+
+	acc = (-Omega_m0*(1+delta_i)/(2.*rmax**2) + rmax*Lambda + 3./2.*rdot*Omega_m0/a**3)/(Omega_m0/a**3 + Lambda)
+
+	x3 = lambda r: 	( density*Omega_m0*r**3 * rdot/(Omega_m0/a**3 + Lambda)/a**3 - density*acc*r**3 )
+
+	pot = quad(x3, 0, rmax)
+
+	return pot[0]
+
+
+def LCDM_overdensity(rmax, amax, rvir, avir, collapse, delta_i, EdS):
+
+	if EdS:
+		Omega_m0 = 1.0
+		Lambda = 0.0
+
+	else:
+		Omega_m0 = 0.26
+		Lambda = 0.74
+
+	odensity = (Omega_m0*(1+delta_i)/rvir**3 + Lambda)/(Omega_m0/avir**3 + Lambda)
+
+	print odensity
+
+
+	odensitymax = (Omega_m0*(1+delta_i)/rmax**3 + Lambda)/(Omega_m0/amax**3 + Lambda)
+			
+	file.write("gen        {:5.10f} 	  | 		 {:5.10e}    	|     {:5.10e}  	|	{:5.10f}	|	{}\n".format(odensity, odensitymax, rvir/rmax, avir/amax, collapse))
+
+	return
+
+def general_virial(y, mix, delta_i, Kinetic, Potential, Overdensity, EdS):
 	#beginning with the skin
 
 	rdot = mix[:,1]
@@ -130,15 +175,16 @@ def general_viraial(y, mix, Omega_m0, delta_i, Kinetic, Potential, acceleration)
 
 	K = np.zeros(len(r))
 
-	while s <= len(r):
+	while s <= len(r)-1:
 
 		if r[s] <= 0:
-			r[s] = 0:
+			r[s] = 0
+			collapse = True
 
-		K = Kinetic(r[s], rdot[s], a[s], delta_i)
-		P = Potential(r[s], rdot[s], acceleration, a[s])
+		K[s] = Kinetic(r[s], rdot[s], a[s], delta_i)
+		U[s] = Potential(r[s], rdot[s], a[s], delta_i, EdS)
 
-		if K <= U:
+		if K[s] <= 4*U[s]:
 			p = s
 
 
@@ -148,11 +194,13 @@ def general_viraial(y, mix, Omega_m0, delta_i, Kinetic, Potential, acceleration)
 		rvir = r[p]
 		avir = a[p]
 
+		Overdensity(rmax, amax, rvir, avir, collapse, delta_i, EdS)
+
 		while p + 1 <= len(r):
 			r[p] = rvir
 			p += 1
 
-
+	return r, avir, U, K
 
 
 
@@ -231,7 +279,13 @@ delta_EdS = 1e-3
 
 
 print "EdS", "----"*5
-radius, info = odeint(r, [r0, drdx0], y, args = (Omega_m0, 0, 0, r0, delta_EdS), full_output = 1)
+radius, info = odeint(r, [r0, drdx0], y, args = (1.0, 0, 0, r0, delta_EdS), full_output = 1)
+
+rad, avirr, potent, kinet = general_virial(y, radius, delta_EdS, LCDM_Kinetic, LCDM_Potential, LCDM_overdensity, True)
+
+mpl.plot(y, rad, "-", linewidth = 0.75, label=r"EdS, $\delta_i =$ %.5e" % delta_EdS )
+mpl.legend()
+mpl.show()
 print type(info)
 """
 #not very important, but could give valuable info
@@ -239,14 +293,14 @@ for key,values in info:
 
 	file.write("{} \n".format(values))
 """
-rad, avirr, potential[0], kinetic[0] = virialcheck(y, radius, Omega_m0, 0, 0, delta_EdS, runer)
+rad, avirr, potential[0], kinetic[0] = virialcheck(y, radius, 1.0, 0, 0, delta_EdS, runer)
 
 
 mpl.plot(y, rad, ":b", linewidth = 0.75, label = r"EdS, $\delta_i =$ %.5e" % delta_EdS )
 
-radius = odeint(EdSr, [r0, drdx0], y, args = (Omega_m0, r0, delta_EdS))
+radius = odeint(EdSr, [r0, drdx0], y, args = (1.0, r0, delta_EdS))
 
-rad, avirr, potential[0], kinetic[0] = virialcheck(y, radius, Omega_m0, 0, 0, delta_EdS, runer)
+rad, avirr, potential[0], kinetic[0] = virialcheck(y, radius, 1.0, 0, 0, delta_EdS, runer)
 
 
 mpl.plot(y, rad, ":b", linewidth = 0.75, label = r"EdS, $\delta_i =$ %.5e" % delta_EdS )		

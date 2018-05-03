@@ -15,6 +15,7 @@ def virialcheck(y, mix, Omega_m0, Omega_K, Lambdavar, delta_i, runer):
 	p = 0
 	rvir = False
 	collapse = False
+	k = 0
 
 	s = np.argmax(r)
 	rmax = r[s]
@@ -30,14 +31,15 @@ def virialcheck(y, mix, Omega_m0, Omega_K, Lambdavar, delta_i, runer):
 
 	for i in range(len(rdot)):
 
-		U[i] = r[i]*r[i]/(Omega_m0/a[i]**3 + Lambdavar)*(3.0*Omega_m0*(1+delta_i)/(5.0*r[i]**3) - 2*Lambdavar) 
+		U[i] = (3.0*Omega_m0*(1+delta_i)/(10.0*r[i]) - 2*r[i]*r[i]*Lambdavar)/(Omega_m0/a[i]**3 + Lambdavar)
 		T[i] = rdot[i]*rdot[i]
 
 		if r[i] <= 0:
 			collapse = True
+			k = i
 
 		if T[i] <= U[i]:
-			#Error found in virialisation crit, but it did not entirely solve the problem. Still 1/10 off
+			#Error seems to be in virialisation crit, but it did not entirely solve the problem. Still 1/10 off
 			controll = False
 			p = i
 
@@ -73,7 +75,8 @@ def virialcheck(y, mix, Omega_m0, Omega_K, Lambdavar, delta_i, runer):
 
 	if rvir:
 			#print " %4.4e | %5.4e | %5.4e" % (rover, avir, delta_i)
-
+		
+		print k, p
 		k = p
 		while k + 1 <= len(r):
 			r[k] = rvir
@@ -92,7 +95,65 @@ def virialcheck(y, mix, Omega_m0, Omega_K, Lambdavar, delta_i, runer):
 
 
 
-#def virbyinertia():
+
+def LCDMdensity(Omega_m0, delta_i, r):
+
+	return Omega_m0*(1+delta_i)/r**3
+
+
+def LCDM_constant():
+
+	return 0.74
+
+
+
+
+
+def general_viraial(y, mix, Omega_m0, delta_i, Kinetic, Potential, acceleration):
+	#beginning with the skin
+
+	rdot = mix[:,1]
+	r = mix[:,0]
+
+	a = np.exp(y)
+	s = 0
+	p = 0
+	rvir = False
+	collapse = False
+	k = 0
+
+	s = np.argmax(r)
+	rmax = r[s]
+	amax = a[s]
+
+	U = np.zeros(len(r))
+
+	K = np.zeros(len(r))
+
+	while s <= len(r):
+
+		if r[s] <= 0:
+			r[s] = 0:
+
+		K = Kinetic(r[s], rdot[s], a[s], delta_i)
+		P = Potential(r[s], rdot[s], acceleration, a[s])
+
+		if K <= U:
+			p = s
+
+
+		s += 1
+
+	if p > 1:
+		rvir = r[p]
+		avir = a[p]
+
+		while p + 1 <= len(r):
+			r[p] = rvir
+			p += 1
+
+
+
 
 
 
@@ -104,7 +165,7 @@ def r(x, y, Omega_m0, Omega_K, Lambda, r_i, delta_i):
 	a = np.exp(y)
 	rr = [[],[]]
 	rr[0] = drdy
-	rr[1] = (Omega_m0/a**3 + Lambda)**-1 * (r*(-Omega_m0*(1+delta_i)/(2.*r**3) + Lambda) + 3./2.*drdy*Omega_m0/a**3) 	
+	rr[1] = (-Omega_m0*(1+delta_i)/(2.*r**2) + r*Lambda + 3./2.*drdy*Omega_m0/a**3)/(Omega_m0/a**3 + Lambda) 	
 
 	return rr
 
@@ -170,8 +231,14 @@ delta_EdS = 1e-3
 
 
 print "EdS", "----"*5
-radius = odeint(r, [r0, drdx0], y, args = (Omega_m0, 0, 0, r0, delta_EdS))
+radius, info = odeint(r, [r0, drdx0], y, args = (Omega_m0, 0, 0, r0, delta_EdS), full_output = 1)
+print type(info)
+"""
+#not very important, but could give valuable info
+for key,values in info:
 
+	file.write("{} \n".format(values))
+"""
 rad, avirr, potential[0], kinetic[0] = virialcheck(y, radius, Omega_m0, 0, 0, delta_EdS, runer)
 
 

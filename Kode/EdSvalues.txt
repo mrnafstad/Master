@@ -1,0 +1,2 @@
+Overdensity at virialization     Overdensity at maximum radius		Radius ratio 		        Time ratio 
+        305.2619213315 	  | 		 5.5515165653e+00    	|     4.0000644274e-01  	|	1.5210867531	|	True

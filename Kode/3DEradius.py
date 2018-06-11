@@ -17,7 +17,7 @@ def virialcheck(y, mix, Omega_m0, Omega_K, Lambdavar, delta_i, runer):
 	collapse = False
 	k = 0
 
-	s = np.argmax(r)
+	t = s = np.argmax(r)
 	rmax = r[s]
 	amax = a[s]
 
@@ -29,21 +29,25 @@ def virialcheck(y, mix, Omega_m0, Omega_K, Lambdavar, delta_i, runer):
 
 	First = True
 
-	for i in range(len(rdot)):
+	while s < len(r) - 1:
 
-		U[i] = (3.0*Omega_m0*(1+delta_i)/(10.0*r[i]) - 2*r[i]*r[i]*Lambdavar)/(Omega_m0/a[i]**3 + Lambdavar)
-		T[i] = rdot[i]*rdot[i]
+		#U[i] = (3.0*Omega_m0*(1+delta_i)/(10.0*r[i]) - 2*r[i]*r[i]*Lambdavar)/(Omega_m0/a[i]**3 + Lambdavar)
+		#T[i] = rdot[i]*rdot[i]
 
-		if r[i] <= 0:
+		if r[s] <= 0:
 			collapse = True
-			k = i
+			k = s
 
+		"""
 		if T[i] <= U[i]:
 			#Error seems to be in virialisation crit, but it did not entirely solve the problem. Still 1/10 off
 			controll = False
 			p = i
-
-
+		"""
+		if abs(3*Omega_m0*(1+delta_i)/10*(1/(2*r[s])- 1/r[t]) +Lambdavar*(3*r[s]**2 - r[t]**2)) <= 1e-4:
+			controll = False
+			p = s			
+		s += 1
 
 	if p >= 1:
 		rvir = r[p]
@@ -273,7 +277,7 @@ print "%4s | %5s" % ("r_vir/r_i", "a_vir")
 
 runer = False
 
-delta_EdS = 1e-3
+delta_EdS = 1.2e-3
 
 
 

@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pylab as mpl
-from scipy.integrate import odeint, RK45
+from scipy.integrate import odeint, RK45, solve_ivp
 import sys
 
 
@@ -104,17 +104,20 @@ def findcoll(delta_max, delta_min, y0):
 		#print "dmin: {:.15e}, dmax: {:.15e}".format(delta_min, delta_max)
 
 		#for deltamax
-		radiusmax = odeint(EdSr, [r0, drdx0], y, args = (1.0, delta_max))
+		delta_i = delta_max
+		radiusmax = odeint(EdSr, [r0, drdx0], y)
 
 		radmax, collmax, colltime_max = virialcheck(y, radiusmax, delta_max)
 
 		#for deltamin
-		radiusmin = odeint(EdSr, [r0, drdx0], y, args = (1.0, delta_min))
+		delta_i = delta_min
+		radiusmin = odeint(EdSr, [r0, drdx0], y)
 
 		radmin, collmin, colltime_min = virialcheck(y, radiusmin, delta_min)
 
 		#for deltamid
-		radiusmid = odeint(EdSr, [r0, drdx0], y, args = (1.0, delta_mid))
+		delta_i = delta_mid
+		radiusmid = odeint(EdSr, [r0, drdx0], y)
 
 		radmid, collmid, colltime_mid = virialcheck(y, radiusmid, delta_mid)
 
@@ -136,7 +139,7 @@ def findcoll(delta_max, delta_min, y0):
 
 
 
-def EdSr(x, y, omega_mo, delta_i):
+def EdSr(x, y):
 	r = x[0]
 	drdy = x[1]
 	a = np.exp(y)
@@ -146,21 +149,26 @@ def EdSr(x, y, omega_mo, delta_i):
 
 	return rr
 
+
+
+
+
+
 file = open("EdSvalues.txt", "w")
 
 file.write("Overdensity at virialization     Overdensity at maximum radius		Radius ratio 		        Time ratio	      Z_coll			Initial Overdensity \n")
 
-delta_i = float(sys.argv[1])
 
 y0 = float(sys.argv[2])
 y = np.linspace( y0, -1e-10, 400000)
 
 
 r0 = drdx0 = np.exp(y0)
+delta_i = 0
+background = odeint(EdSr, [r0, drdx0], y)
 
-background = odeint(EdSr, [r0, drdx0], y, args = (1.0, 0.0))
-
-radius = odeint(EdSr, [r0, drdx0], y, args = (1.0, delta_i))
+delta_i = float(sys.argv[1])
+radius = odeint(EdSr, [r0, drdx0], y)
 overvir, coll, ct = virialcheck(y, radius, delta_i)
 
 mpl.plot(y, background[:,0], "c-", linewidth = 0.75, label = "Background")
@@ -186,8 +194,13 @@ while abs(colltime) > acceptance:
 	dmin, dmax, colltime = findcoll(dmax, dmin, y0)
 	diff = abs(abs(colltime) - acceptance)
 	
-radius = RK45(EdSr, [r0, drdx0], y, args = (1.0, dmax))
-overvir, coll, ct = virialcheck(y, radius, dmax)
+
+#radius = RK45(EdSr, [r0, drdx0], y, args = (1.0, dmax))
+#Try using ipv:
+delta_i = dmax
+radius = solve_ivp(EdSr, [y0, 0.1], [r0, drdx0], method = "RK45")			#Runs forever, need to figure that out
+
+overvir, coll, ct = virialcheck(y, radius.y, dmax)
 
 mpl.plot(y, background[:,0], "c-", linewidth = 0.75, label = "Background")
 

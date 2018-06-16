@@ -146,7 +146,7 @@ def EdSr(x, y, omega_mo, delta_i):
 
 	return rr
 
-file = open("EdSvalues.txt", "w")
+file = open("Numbers\EdSvalues.txt", "w")
 
 file.write("Overdensity at virialization     Overdensity at maximum radius		Radius ratio 		        Time ratio	      Z_coll			Initial Overdensity \n")
 
@@ -186,7 +186,7 @@ while abs(colltime) > acceptance:
 	dmin, dmax, colltime = findcoll(dmax, dmin, y0)
 	diff = abs(abs(colltime) - acceptance)
 	
-radius = RK45(EdSr, [r0, drdx0], y, args = (1.0, dmax))
+radius = odeint(EdSr, [r0, drdx0], y, args = (1.0, dmax))
 overvir, coll, ct = virialcheck(y, radius, dmax)
 
 mpl.plot(y, background[:,0], "c-", linewidth = 0.75, label = "Background")

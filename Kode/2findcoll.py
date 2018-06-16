@@ -6,7 +6,7 @@ from itertools import cycle
 
 H0 = 2.2685455*10**12	#km/s/Mpc
 
-def virialcheck(y, mix, Omega_m0, Omega_K, Lambda, delta_i, runer):
+def virialcheck(y, mix, Omega_m0, Omega_K, Lambdavar, delta_i, runer):
 	rdot = mix[:,1]
 	r = mix[:,0]
 
@@ -16,28 +16,26 @@ def virialcheck(y, mix, Omega_m0, Omega_K, Lambda, delta_i, runer):
 	rvir = False
 	collapse = False
 
+	s = np.argmax(r)
+	rmax = r[s]
+	amax = a[s]
+
 	first = True
 	values = [0, 0, 0, 0, collapse]
 
-	for i in range(len(rdot)):
-		
-		if ( r[i] <= 0 and first ):
+	while s < len(r) - 1:
+
+
+
+		if r[s] <= 0:
 			collapse = True
-			first = False
-			t = i
+			p = s
+			break
 
-		
-		
-		U = r[i]*r[i]/(Omega_m0/a[i]**3 + Omega_K/a[i]**2 + Lambda)*3./5.*(Omega_m0*(1+delta_i)/(2*r[i]**3) - Lambda) 
-		T = rdot[i]*rdot[i]
-		
-
-		
-
-		if T <= U:
-			rvir = r[i]
-			p = i
-
+		if abs(3*Omega_m0*(1+delta_i)/10*(1/(2*r[s])- 1/r[t]) +Lambdavar*(3*r[s]**2 - r[t]**2)) <= 1e-4:
+			controll = False
+			t = s			
+		s += 1
 
 	rover = rvir/r[0]
 	avir = a[p]
@@ -49,9 +47,7 @@ def virialcheck(y, mix, Omega_m0, Omega_K, Lambda, delta_i, runer):
 
 	if rvir:
 		odensity = (Omega_m0*(1+delta_i)/rvir**3 + Lambda)/(Omega_m0/avir**3 + Lambda)
-		s = np.argmax(r)
-		rmax = r[s]
-		amax = a[s]
+		
 
 		odensitymax = (Omega_m0*(1+delta_i)/rmax**3 + Lambda)/(Omega_m0/amax**3 + Lambda)
 
@@ -59,13 +55,12 @@ def virialcheck(y, mix, Omega_m0, Omega_K, Lambda, delta_i, runer):
 
 	if rvir:
 
-		k = p
 
-		while k + 1 <= len(r):
-			r[k] = rvir
-			k += 1
+		while t + 1 <= len(r):
+			r[t] = rvir
+			t += 1
 
-	return r, collapse, y[t], values
+	return r, collapse, y[p], values
 
 
 def r(x, y, Omega_m0, Omega_K, Lambda, r_i, delta_i):
@@ -124,7 +119,7 @@ def findcoll(delta_max, delta_min, y0):
 
 	return delta_min, delta_max, x_coll, outputvals
 
-file = open("fittingvalues.txt", "w")
+file = open("Numbers\Fittingvalues.txt", "w")
 
 file.write("      z0          |          ODMax         |          ODVir           |        rvir/rmax         |      avir/amax       |     bool collapse     |      collapse time\n")
 
@@ -135,7 +130,7 @@ Omega_K = 1 - Omega_m0 - Lambda
 
 runer = False
 
-m = 50
+m = 10
 
 y0_array = np.linspace(-11, -6.9, m)
 
@@ -143,8 +138,7 @@ dmax_array = np.zeros(m)
 
 #print dmin, dmax, colltime
 
-acceptance = float(sys.argv[1])
-print acceptance
+acceptance = 0.1
 
 
 for i in range(len(y0_array)):

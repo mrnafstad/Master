@@ -134,8 +134,12 @@ def findcollshell(y0, model):
 	#y0 corresponds to the initial redshift of the perturbation
 	#model indicates which model (EdS or LCDM) we want to fitt the collapse to
 	acceptance = 0.0001
+	print model
 
+	fname = "Figures\LCDMfitting"  + str(int(np.exp(-y0) - 1)) + model + ".png"
 
+	tykk = 0.75
+	#tykk = 1.0
 
 	dmin = 0.0	
 	dmax = 0.01
@@ -146,20 +150,20 @@ def findcollshell(y0, model):
 		dmin, dmax, colltime = findcoll(dmax, dmin, y0, model)
 		diff = abs(abs(colltime) - acceptance)
 
-	mpl.plot(y, radback, "-c", linewidth = 1.0, label = "Background")
+	mpl.plot(y, radback, "-c", linewidth = tykk, label = "Background")
 
 	fitt = odeint(r, [r0, drdx0], y, args = (Omega_m0, Omega_K, Lambda, r0, dmax))
 	overvir, coll, ct = virialcheck(y, fitt, Omega_m0, Omega_K, Lambda, dmax, "LCDM")
 
 
-	mpl.plot(y, overvir, "r-.", linewidth = 1.0, label  = r"Fitted $\Lambda$CDM, $\delta_i = $ %.5e" % dmax)
+	mpl.plot(y, overvir, "r-.", linewidth = tykk, label  = r"Fitted $\Lambda$CDM, $\delta_i = $ %.5e" % dmax)
 
 	radius = odeint(r, [r0, drdx0], y, args = (1.0, 0.0, 0.0, r0, dmax))
 
 	rad, coll, time = virialcheck(y, radius, 1.0, 0, 0, dmax, "EdS")
 
 
-	mpl.plot(y, rad, ":b", linewidth = 1.0, label = r"EdS ($\Lambda$CDM-fitted), $\delta_i =$ %.5e" % dmax )
+	mpl.plot(y, rad, ":b", linewidth = tykk, label = r"EdS ($\Lambda$CDM-fitted), $\delta_i =$ %.5e" % dmax )
 
 
 
@@ -167,8 +171,11 @@ def findcollshell(y0, model):
 	mpl.ylabel("r(a)")
 	mpl.legend( loc=2)
 
-	mpl.title(r"$z =$ %0.2f, varying values of $\delta_i$" % (np.exp(-y0)-1))
-	mpl.show()
+	mpl.title(r"$z =$ %0.2f" % (np.exp(-y0)-1))
+	#mpl.show()
+	mpl.savefig(fname)
+
+	mpl.clf()
 
 
 
@@ -181,12 +188,6 @@ def findcollshell(y0, model):
 
 N = 5000000
 
-print "Now takes literal redshift instead of y variable"
-y0 = np.log(1/(1 + float(sys.argv[1])))		
-#use len() to loop through all the elements from cmd
-
-
-y = np.linspace( y0, -1e-15, N)
 
 
 Lambda = 0.74
@@ -196,23 +197,20 @@ Omega_K = 0
 
 
 
-r0 = np.exp(y0)
-drdx0 = np.exp(y0)
-
-delta_EdS = 1.2e-3
 
 
-
-#Background evolution
 
 
 
 for j in range(len(sys.argv)-1):
 
 	y0 = np.log(1/(1 + float(sys.argv[j+1])))		
-	#use len() to loop through all the elements from cmd
+
+	r0 = np.exp(y0)
+	drdx0 = np.exp(y0)
 
 	filename = "Numbers\LCDMvalues" + str(sys.argv[j+1]) + ".txt"
+
 	y = np.linspace( y0, -1e-15, N)
 
 	file = open(filename, "w")
@@ -225,5 +223,6 @@ for j in range(len(sys.argv)-1):
 	file.write("-----"*100)
 	file.write("\n")
 	findcollshell(y0, "EdS")
+	print y0
 
 	file.close()

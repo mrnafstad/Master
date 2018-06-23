@@ -104,17 +104,17 @@ def findcoll(delta_max, delta_min, y0, model):
 		#print "dmin: {:.15e}, dmax: {:.15e}".format(delta_min, delta_max)
 
 		#for deltamax
-		radiusmax = odeint(r, [r0, drdx0], y, args = (Omega_m0, Omega_K, Lambda, r0, delta_max))
+		radiusmax = odeint(r, [r0, drdx0], y, args = (Omega_m0, Omega_K, Lambda, r0, delta_max), mxstep = 5000000)
 
 		radmax, collmax, colltime_max = virialcheck(y, radiusmax, Omega_m0, Omega_K, Lambda, delta_max, model)
 
 		#for deltamin
-		radiusmin = odeint(r, [r0, drdx0], y, args = (Omega_m0, Omega_K, Lambda, r0, delta_min))
+		radiusmin = odeint(r, [r0, drdx0], y, args = (Omega_m0, Omega_K, Lambda, r0, delta_min), mxstep = 5000000)
 
 		radmin, collmin, colltime_min = virialcheck(y, radiusmin, Omega_m0, Omega_K, Lambda, delta_min, model)
 
 		#for deltamid
-		radiusmid = odeint(r, [r0, drdx0], y, args = (Omega_m0, Omega_K, Lambda, r0, delta_mid))
+		radiusmid = odeint(r, [r0, drdx0], y, args = (Omega_m0, Omega_K, Lambda, r0, delta_mid), mxstep = 5000000)
 
 		radmid, collmid, colltime_mid = virialcheck(y, radiusmid, Omega_m0, Omega_K, Lambda, delta_mid, model)
 
@@ -210,7 +210,7 @@ while abs(colltime) > acceptance:
 	dmin, dmax, colltime = findcoll(dmax, dmin, y0, "EdS")
 	diff = abs(abs(colltime) - acceptance)
 
-fitt = odeint(r, [r0, drdx0], y, args = (Omega_m0, Omega_K, Lambda, r0, dmax))
+fitt = odeint(r, [r0, drdx0], y, args = (Omega_m0, Omega_K, Lambda, r0, dmax), mxstep = 5000000)
 overvir, coll, ct = virialcheck(y, fitt, Omega_m0, Omega_K, Lambda, dmax, "LCDM")
 
 if coll == False:
@@ -218,7 +218,7 @@ if coll == False:
 
 mpl.plot(y, overvir, "-.", linewidth = 0.75, label  = r"Fitted $\Lambda$CDM, $\delta_i = $ %.5e" % dmax)
 
-radius = odeint(r, [r0, drdx0], y, args = (1.0, 0.0, 0.0, r0, dmax))
+radius = odeint(r, [r0, drdx0], y, args = (1.0, 0.0, 0.0, r0, dmax), mxstep = 5000000)
 
 rad, coll, time = virialcheck(y, radius, 1.0, 0, 0, dmax, "EdS")
 

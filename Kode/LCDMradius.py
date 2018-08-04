@@ -35,9 +35,10 @@ def virialcheck(y, mix, Omega_m0, Omega_K, Lambdavar, delta_i, model):
 			t = s
 			break
 
-		if abs(3*Omega_m0*(1+delta_i)/10*(1/(2*r[s])- 1/r[t]) +Lambdavar*(3*r[s]**2 - r[t]**2)) <= 1e-4:
-			controll = False
+		if abs(3./10.*(Omega_m0*(1+delta_i)*(1/( 1/r[t] - 1/(2*r[s]))) +Lambdavar*(r[t]**2 - 2*r[s]**2))) <= 1e-4:
+			
 			p = s			
+			break
 		s += 1
 
 	if p >= 1:
@@ -98,7 +99,7 @@ def findcoll(delta_max, delta_min, y0, model):
 		Omega_K = 0.0
 		Lambda = 0.74
 
-	for i in range(30):
+	for i in range(15):
 
 		delta_mid = (delta_max + delta_min)/2.0
 		#print "dmin: {:.15e}, dmax: {:.15e}".format(delta_min, delta_max)

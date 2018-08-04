@@ -3,6 +3,10 @@ import matplotlib.pylab as mpl
 from scipy.integrate import odeint, quad
 import sys
 
+from time import *
+
+t0 = clock()
+
 def virialcheck(y, mix, Omega_m0, Omega_K, Lambdavar, delta_i, model):
 	rdot = mix[:,1]
 	r = mix[:,0]
@@ -35,9 +39,11 @@ def virialcheck(y, mix, Omega_m0, Omega_K, Lambdavar, delta_i, model):
 			t = s
 			break
 
-		if abs(3*Omega_m0*(1+delta_i)/10*(1/(2*r[s])- 1/r[t]) +Lambdavar*(3*r[s]**2 - r[t]**2)) <= 1e-5:
+		if abs(3./10.*(Omega_m0*(1+delta_i)*(1./r[t] - 1./(2*r[s])) + Lambdavar*(r[t]**2 - 2* r[s]**2))) <= 1e-4:
 			controll = False
-			p = s			
+			p = s
+
+		#elif abs(Omega_m0*(1 + delta_i)*(1./1/))			
 		s += 1
 
 	if p >= 1:
@@ -81,13 +87,10 @@ def findcoll(delta_max, delta_min, y0, model):
 	
 	N = 500000
 
-	eps = 1e-13
-
 	y = np.linspace(y0, -1e-15, N)
 	r0 = np.exp(y0)
 	drdx0 = np.exp(y0)
 
-	outputvals = np.zeros(5)
 
 	if model == "EdS":
 		Omega_m0 = 1.0
@@ -151,6 +154,7 @@ def findcollshell(y0, model):
 		diff = abs(abs(colltime) - acceptance)
 
 	mpl.plot(y, radback, "-c", linewidth = tykk, label = "Background")
+	print dmax - dmin
 
 	fitt = odeint(r, [r0, drdx0], y, args = (Omega_m0, Omega_K, Lambda, r0, dmax))
 	overvir, coll, ct = virialcheck(y, fitt, Omega_m0, Omega_K, Lambda, dmax, "LCDM")
@@ -183,7 +187,7 @@ def findcollshell(y0, model):
 		file.write("EdS fitted perturbation does not collapse or virialize today in LCDM \n")
 
 
-	return dmax
+	return
 
 
 N = 5000000
@@ -226,3 +230,8 @@ for j in range(len(sys.argv)-1):
 	print y0
 
 	file.close()
+
+t1 = clock()
+
+dt = t1-t0
+print dt

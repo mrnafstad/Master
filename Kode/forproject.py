@@ -192,15 +192,17 @@ def findcollshell(y0, model, full):
 	if not full:
 		#plot background
 		#mpl.xlim(3000, 0)
-		z = np.exp(-y) - 1
-		mpl.plot(y, radback, "-c", linewidth = 0.75, label = "Background")
+		z = np.exp(y)
+		mpl.plot(z, radback, "-c", linewidth = 0.75, label = "Background")
 
 		#solve for the fitted overdensity in LCDM, and check virialization
 		fitt = odeint(r, [r0, drdx0], y, args = (Omega_m0, Lambda, r0, dmax))
 		overvir, coll, ct = virialcheck(y, fitt, Omega_m0, Lambda, dmax, "LCDM", full)
 
+		#mpl.xlim(2800, 0.0000001)
+
 		#plot LCDM evolution
-		mpl.plot(y, overvir, "r-.", linewidth = 0.75, label  = r"Fitted $\Lambda$CDM, $\delta_i = $ %.5e" % dmax)
+		mpl.plot(z, overvir, "r-.", linewidth = 0.75, label  = r"Fitted $\Lambda$CDM, $\delta_i = $ %.5e" % dmax)
 
 		#solve for the fitted overdensity in EdS and check virialization 
 		radius = odeint(r, [r0, drdx0], y, args = (1.0, 0.0, r0, dmax))
@@ -208,15 +210,16 @@ def findcollshell(y0, model, full):
 		rad, coll, time = virialcheck(y, radius, 1.0, 0, dmax, "EdS", full)
 
 		#plot EdS evolution
-		mpl.plot(y, rad, ":b",linewidth = 0.75, label = r"EdS ($\Lambda$CDM-fitted), $\delta_i =$ %.5e" % dmax )
+		mpl.plot(z, rad, ":b",linewidth = 0.75, label = r"EdS ($\Lambda$CDM-fitted), $\delta_i =$ %.5e" % dmax )
 
 
 		#create and save figure
-		mpl.xlabel("x = ln(a)", labelpad = 10)
+		mpl.xlabel("x = a", labelpad = 10)
+		#mpl.xscale("log")
 		mpl.ylabel(r"$\~R$", rotation = 0, labelpad = 10)
 		mpl.legend( loc=2)
 
-		mpl.title(r"$z =$ %0.2f" % (np.exp(-y0)-1))
+		mpl.title(r"$z_i =$ %0.2f" % (np.exp(-y0)-1))
 		mpl.savefig(fname)
 
 		mpl.clf()

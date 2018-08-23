@@ -65,10 +65,10 @@ def virialcheck(y, mix, Omega_m0, Lambdavar, delta_i, model, full):
 
 	if rvir:
 		#calculate the overdensity of the perturbation at TA (odensitymax) and virialization (odensity)
-		odensity = (Omega_m0*(1+delta_i)/rvir**3 + Lambdavar)/(Omega_m0/avir**3 + Lambdavar)
+		odensity = (Omega_m0*(1+delta_i)/rvir**3)/(Omega_m0/avir**3)
 
 
-		odensitymax = (Omega_m0*(1+delta_i)/rmax**3 + Lambdavar)/(Omega_m0/amax**3 + Lambdavar)
+		odensitymax = (Omega_m0*(1+delta_i)/rmax**3)/(Omega_m0/amax**3)
 		
 		#set all elements in the radial array after virialization to r_vir
 		k = p
@@ -97,6 +97,27 @@ def r(x, y, Omega_m0, Lambda, r_i, delta_i):
 
 	return rr
 
+def RsoverRspecial(r, r_iovera_i, a):
+	return 1 - (1.6e20/r_iovera_i)**2*r*(a**(3./(0.02 + 1)) - r**(3./(0.02 +1)))
+
+def RsoverRgeneral(r, r_iovera_i, a, beta, n, M_pl, Omega_m0, delta_i, L, rho_c):
+	return 1 - 2./(beta*Omega_m0*(1+delta_i))*(M_pl*L/(rho_c*r_iovera_i**2))*(n*M_pl*L**3/(3*beta*Omega_m0*rho_c))**(1./(n+1)) \
+	*r*(a**(3./(n+1)) - r**(3./(n+1))*(1 + delta_i)**(-1./(n+1)))
+
+def chameleon(x, y, Omega_m0, Omega_phi, delta_i, beta, r_iovera_i):
+	r = x[0]
+	drdy = x[1]
+	a = np.exp(y)
+	#Rs = 
+	g_p = 1 + 2.*beta**2*(1 - RsoverRspecial(r, r_iovera_i, a))
+	g_b = 1 + 2.*beta**2
+	rr = [[],[]]
+	rr[0] = drdy
+	rr[1] = (Omega_phi*r - g_p*Omega_m0*(1+delta_i)/(2.*r**2) + 3./2.*drdy*g_b*Omega_m0/a**3)/(g_b*Omega_m0/a**3 + Omega_phi)
+
+	return rr
+
+
 def findcoll(delta_max, delta_min, y0, model, full):
 	#This is a part of the rootfinding algorithm, it is used inside findcollshell()
 	#The function employs the bisection method
@@ -105,7 +126,7 @@ def findcoll(delta_max, delta_min, y0, model, full):
 	
 
 	#Set initial conditions and time array
-	N = 500000
+	N = 5000000
 
 	y = np.linspace(y0, -1e-15, N)
 	r0 = np.exp(y0)
@@ -116,8 +137,8 @@ def findcoll(delta_max, delta_min, y0, model, full):
 		Omega_m0 = 1.0
 		Lambda = 0.0
 	else:
-		Omega_m0 = 0.26
-		Lambda = 0.74
+		Omega_m0 = 0.25
+		Lambda = 0.75
 
 	for i in range(15):
 
@@ -157,7 +178,7 @@ def findcoll(delta_max, delta_min, y0, model, full):
 
 
 
-	return delta_min, delta_max, x_coll
+	return delta_min, delta_max, x_coll, radmax
 
 def findcollshell(y0, model, full):
 	#shell for rootfinding algorithm, may be combined into one function
@@ -166,7 +187,7 @@ def findcollshell(y0, model, full):
 
 	#set the acceptance of the rootfinding, i.e. how big redshift we can accept
 	#for collapse today
-	acceptance = 0.001
+	acceptance = 0.0001
 	#print np.exp(acceptance)-1
 
 	#generate filename for plot based on the model and initial redshift
@@ -183,7 +204,7 @@ def findcollshell(y0, model, full):
 	while abs(colltime) > acceptance:
 		diff1 = diff
 		#loop through rootfind until collapse happens ~today
-		dmin, dmax, colltime = findcoll(dmax, dmin, y0, model, full)
+		dmin, dmax, colltime, fitt = findcoll(dmax, dmin, y0, model, full)
 		diff = abs(abs(colltime) - acceptance)
 		if diff1 == diff:
 			#break if the rootfinding does not converge
@@ -195,19 +216,21 @@ def findcollshell(y0, model, full):
 		z = np.exp(y)
 		mpl.plot(z, radback, "-c", linewidth = 0.75, label = "Background")
 
-		#solve for the fitted overdensity in LCDM, and check virialization
-		fitt = odeint(r, [r0, drdx0], y, args = (Omega_m0, Lambda, r0, dmax))
-		overvir, coll, ct = virialcheck(y, fitt, Omega_m0, Lambda, dmax, "LCDM", full)
+		if model == "EdS":
+			#solve for the fitted overdensity in LCDM, and check virialization
+			fitt = odeint(r, [r0, drdx0], y, args = (Omega_m0, Lambda, r0, dmax))
+			fitt, coll, ct = virialcheck(y, fitt, Omega_m0, Lambda, dmax, "LCDM", full)
 
 		#mpl.xlim(2800, 0.0000001)
 
 		#plot LCDM evolution
-		mpl.plot(z, overvir, "r-.", linewidth = 0.75, label  = r"Fitted $\Lambda$CDM, $\delta_i = $ %.5e" % dmax)
+		mpl.plot(z, fitt, "r-.", linewidth = 0.75, label  = r"Fitted $\Lambda$CDM, $\delta_i = $ %.5e" % dmax)
 
 		#solve for the fitted overdensity in EdS and check virialization 
 		radius = odeint(r, [r0, drdx0], y, args = (1.0, 0.0, r0, dmax))
 
 		rad, coll, time = virialcheck(y, radius, 1.0, 0, dmax, "EdS", full)
+
 
 		#plot EdS evolution
 		mpl.plot(z, rad, ":b",linewidth = 0.75, label = r"EdS ($\Lambda$CDM-fitted), $\delta_i =$ %.5e" % dmax )
@@ -239,8 +262,8 @@ N = 5000000
 
 
 #set density parameters for the background evolution
-Lambda = 0.74
-Omega_m0 = 0.26
+Lambda = 0.75
+Omega_m0 = 0.25
 
 
 
@@ -292,6 +315,15 @@ if Bigloop == False:
 		findcollshell(y0, "EdS", False)
 
 		file.close()
+
+		delta_i = 1e-4
+		for i in [0.001, 0.01, 0.025, 0.05, 0.1]:
+			rcham = odeint(chameleon, [r0, drdx0], y, args = (Omega_m0, Lambda, delta_i, 0.01, i))
+			mpl.plot(y, rcham[:,0], "-.", linewidth = 0.75, label = r"$\frac{r_i}{a_i}$ = %.1f Mpc" % i)
+
+		mpl.title(r"Chameleon, $\delta_i$ = %.1e" % delta_i)	
+		mpl.legend()
+		mpl.show()
 
 
 

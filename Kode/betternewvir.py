@@ -8,44 +8,77 @@ from scipy.integrate import odeint
 import sys
 
 
-def vircheck(R, y, Omega_m0, Lambda, delta_i, acceleration):
+def vircheck(R, y, Omega_m0, Lambda, delta_i, acceleration, E, file):
 
 	a = np.exp(y)
 
 	rad = R[:, 0]
 	drdy = R[:, 1]
-	ddrddy = acceleration(Omega_m0, Lambda, delta_i, a, rad, drdy)
-	j = np.argmax(rad)
+	ddrddy = acceleration(Omega_m0, Lambda, delta_i, a, rad, drdy, E, 0, 0)
+	s = j = np.argmax(rad)
 
-	while abs(2*ddrddy[j] + drdy[j]) > 1e-4:
+	T = kinetic(drdy)
+	W = potential(rad, drdy, ddrddy, a, E, Omega_m0, Lambda)
+
+	W_ta = potential(rad[s], drdy[s], ddrddy[s], a[s], E, Omega_m0, Lambda)
+
+	vir = False
+
+	while ( j < len(rad) - 1 and rad[j] >= 0):
+
+		if abs( 2*T[j] + W[j] ) <= 1e-4:
+
+			i = k = j
+			vir = True
+
+
 		j += 1
-		if j-1 == len(rad):
-			break
+	
+	if not vir:
+		i = j
+		print "It did not work"
 
-	i = j
 	while i < len(rad):
-		rad[j] = rad[i]
+		rad[i] = rad[k]
 		i += 1
 
-	return rad
+	odensity = (Omega_m0*(1+delta_i)/rad[k]**3)/(Omega_m0/a[k]**3)
+	odensitymax = (Omega_m0*(1+delta_i)/rad[s]**3)/(Omega_m0/a[s]**3)
+
+	file.write("{:1.5f} \n".format(odensity))
+	file.write("{:1.5f} \n".format(odensitymax))
+
+	rviroverrta = rad[k]/rad[s]
+	aviroverata = a[k]/a[s]
+
+	file.write("{:1.10e} \n".format(rviroverrta))
+	file.write("{:1.5f} \n".format(aviroverata))
+
+	return rad, T, W
 
 
+def kinetic(drdy):
+	return 3./10.*drdy**2
+
+def potential(radius, dotR, ddotR, a, E, Omega_m0, Lambda):
+	W = 3./5.*radius*(-3*Omega_m0/(2*a**3*E(Omega_m0, Lambda, a, 0, 0))*dotR + ddotR)
+	return W
 
 
-def r(x, y, Omega_m0, Lambda, r_i, delta_i, acceleration):
+def r(x, y, Omega_m0, Lambda, r_i, delta_i, acceleration, E):
 	#input function to be used by odeint. Generic form for a seccond order ode
 	r = x[0]
 	drdy = x[1]
 	a = np.exp(y)
 	rr = [[],[]]
 	rr[0] = drdy
-	rr[1] = acceleration(Omega_m0, Lambda, delta_i, a, r, drdy)	
+	rr[1] = acceleration(Omega_m0, Lambda, delta_i, a, r, drdy, E, 0, 0)	
 
 	return rr
 
 
 
-def findcoll(tolerance, acceleration, model, y0):
+def findcoll(tolerance, acceleration, model, E, y0, file):
 
 	#Set initial conditions and time array
 	N = 5000000
@@ -80,15 +113,15 @@ def findcoll(tolerance, acceleration, model, y0):
 		delta_mid = (delta_max + delta_min)/2.0
 
 		# solve for deltamax
-		radiusmax = odeint(r, [r0, drdx0], y, args = (Omega_m0, Lambda, r0, delta_max, acceleration))
+		radiusmax = odeint(r, [r0, drdx0], y, args = (Omega_m0, Lambda, r0, delta_max, acceleration, E))
 
 
 		#solve for deltamin
-		radiusmin = odeint(r, [r0, drdx0], y, args = (Omega_m0, Lambda, r0, delta_min, acceleration))
+		radiusmin = odeint(r, [r0, drdx0], y, args = (Omega_m0, Lambda, r0, delta_min, acceleration, E))
 
 
 		#solve for deltamid
-		radiusmid = odeint(r, [r0, drdx0], y, args = (Omega_m0, Lambda, r0, delta_mid, acceleration))
+		radiusmid = odeint(r, [r0, drdx0], y, args = (Omega_m0, Lambda, r0, delta_mid, acceleration, E))
 
 		for i in range(len(radiusmax[:,0])):
 			if radiusmax[i,0] <= 0:
@@ -135,25 +168,76 @@ def findcoll(tolerance, acceleration, model, y0):
 			print "This may be infinite"
 			break
 
-	R = odeint(r, [r0, drdx0], y, args = (Omega_m0, Lambda, r0, delta_max, acceleration))
+	ct = np.exp(-x_coll) -1
+	file.write("{:1.7f} \n".format(delta_max))
+	file.write("{:1.7e} \n".format(ct))
 
-	mpl.plot(y, R[:,0], linewidth = 0.75, label = model)
+	R = odeint(r, [r0, drdx0], y, args = (Omega_m0, Lambda, r0, delta_max, acceleration, E))
 
-	rvir = vircheck(R, y, Omega_m0, Lambda, delta_max, acceleration)
-	mpl.plot(y, rvir, linewidth = 0.75, label = "vir")
+	#mpl.plot(y, R[:,0], linewidth = 0.75, label = model)
 
+	rvir, T, W = vircheck(R, y, Omega_m0, Lambda, delta_max, acceleration, E, file)
+	mpl.plot(y, rvir, "-.", linewidth = 0.75, label = model)
+
+	return T, W, y
+
+
+def LCDMacc( Omega_m0, Lambda, delta_i, a, r, drdy, E, gamma, beta):
+	return (-Omega_m0*(1+delta_i)/(2.*r**2) + r*Lambda + 3./2.*drdy*Omega_m0/a**3)/E(Omega_m0, Lambda, a, 0, 0)
+
+def ELCDMnorad(Omega_m0, Lambda, a, gamma, beta):
+	return Omega_m0/a**3 + Lambda
+
+def chameleonacc( Omega_m0, Lambda, delta_i, a, r, drdy, E, gamma, beta):
+	return  ( Lambda*r - gamma()*Omega_m0*(1 + delta_i)/(2*r**2) + 3./2.*gamma()*Omega_m0*drdy/a**3)/E(Omega_m0, Lambda, a, gamma)
+
+def Echamnorad(Omega_m0, Lambda, a, gamma):
+	return gamma()*Omega_m0/a**3 + Lambda
+
+def gammaHuSawicki():
 	return 
-
-
-def LCDMacc( Omega_m0, Lambda, delta_i, a, r, drdy):
-	return (-Omega_m0*(1+delta_i)/(2.*r**2) + r*Lambda + 3./2.*drdy*Omega_m0/a**3)/(Omega_m0/a**3 + Lambda)
 
 
 tolerance = float(sys.argv[1])
 y0 = np.log(1/(1+float(sys.argv[2])))
+"""
+findcoll(tolerance, LCDMacc, "LCDM", ELCDMnorad, y0)
+findcoll(tolerance, LCDMacc, "EdS", ELCDMnorad, y0)
 
-findcoll(tolerance, LCDMacc, "LCDM",y0)
-findcoll(tolerance, LCDMacc, "EdS", y0)
+
+"""
+
+fileLCDM = open("Numbers\LCDMviracc.txt", "w")
+fileEdS = open("Numbers\EdSvirracc.txt", "w")
+
+T1, W1, y = findcoll(tolerance, LCDMacc, "LCDM", ELCDMnorad, y0, fileLCDM)
+T2, W2, y = findcoll(tolerance, LCDMacc, "EdS", ELCDMnorad, y0, fileEdS)
+
+fileLCDM.close()
+fileEdS.close()
 
 mpl.legend()
-mpl.show()
+mpl.savefig("Figures\Evolution.png")
+mpl.clf()
+
+mpl.plot(y, T1, "c-", linewidth = 0.75, label = r"$T_{\Lambda CDM}$")
+mpl.plot(y, -W1, "c--", linewidth = 0.75, label = r"$W_{\Lambda CDM}$")
+
+mpl.plot(y, 0.5*T2, "r:", linewidth = 0.75, label = r"$T_{EdS}$")
+mpl.plot(y, -W2, "r-.", linewidth = 0.75, label = r"$W_{EdS}$")
+
+mpl.yscale("log")
+
+mpl.legend()
+mpl.savefig("Figures\Energies.png")
+mpl.clf()
+
+relLCDM = -W1/T1
+relEdS = -W2/T2
+
+mpl.plot(y, relLCDM, "b-", linewidth = 0.75, label = r"$\frac{W_{\Lambda CDM}}{T_{\Lambda CDM}}$")
+mpl.plot(y, relEdS, "r:", linewidth = 0.75, label = r"$\frac{W_{EdS}}{T_{EdS}}$")
+mpl.yscale("log")
+mpl.legend()
+mpl.savefig("Figures\RelativeEnergies.png")
+mpl.clf()

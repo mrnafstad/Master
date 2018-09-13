@@ -8,23 +8,32 @@ from scipy.integrate import odeint
 import sys
 
 
-H_0 = 70 #km/s/Mpc
-G = 6.67408e-11 		#M^3/kg/s^2
+#H_0 = 70 				#km/s/Mpc
+#H_0 = 1e-42 			#GeV
+G = 1/(4*np.pi)			#M^3/kg/s^2 not these units
 M_pl = 1./np.sqrt(8*np.pi*G)
+H_0 = 1./M_pl
+rho_c0 = 3*H_0**2/(8*np.pi*G)
 
-def vircheck(R, y, Omega_m0, Lambda, delta_i, acceleration, E, gamma, beta, M, f_R0, r_iovera_i, delta_rho, n, file):
+print H_0, G, M_pl, rho_c0
+
+def vircheck(R, y, Omega_m0, Lambda, delta_i, acceleration, E, gamma, beta, M, f_R0, delta_rho, n, file):
 
 	a = np.exp(y)
 
 	rad = R[:, 0]
 	drdy = R[:, 1]
-	ddrddy = acceleration( Omega_m0, Lambda, delta_i, a, rad, drdy, E, gamma, beta, M, f_R0, r_iovera_i, delta_rho, n )
+	ddrddy = np.zeros(len(rad))
 	s = j = np.argmax(rad)
-
+	W_ta = potential(rad[s], drdy[s], ddrddy[s], a[s], E, Omega_m0, Lambda, gamma, beta, delta_rho, M, r, delta_i, n )
 	T = kinetic(drdy)
-	W = potential(rad, drdy, ddrddy, a, E, Omega_m0, Lambda, gamma, beta)
+	W = np.zeros(len(T))
+	for i in range(len(rad)):
+		ddrddy[i] = acceleration( Omega_m0, Lambda, delta_i, a[i], rad[i], drdy[i], E, gamma, beta, M, f_R0, delta_rho, n )
 
-	W_ta = potential(rad[s], drdy[s], ddrddy[s], a[s], E, Omega_m0, Lambda, gamma, beta)
+		W[i] = potential(rad[i], drdy[i], ddrddy[i], a[i], E, Omega_m0, Lambda, gamma, beta, delta_rho, M, r, delta_i, n)
+
+	
 
 	vir = False
 
@@ -47,6 +56,7 @@ def vircheck(R, y, Omega_m0, Lambda, delta_i, acceleration, E, gamma, beta, M, f
 			rad[i] = rad[k]
 			i += 1
 
+
 		odensity = (Omega_m0*(1+delta_i)/rad[k]**3)/(Omega_m0/a[k]**3)
 		odensitymax = (Omega_m0*(1+delta_i)/rad[s]**3)/(Omega_m0/a[s]**3)
 
@@ -59,32 +69,32 @@ def vircheck(R, y, Omega_m0, Lambda, delta_i, acceleration, E, gamma, beta, M, f
 		file.write("{:1.10e} \n".format(rviroverrta))
 		file.write("{:1.5f} \n".format(aviroverata))
 	else:
-		file.write("These parameters do not lead to collapse.")
+		file.write("These parameters do not lead to collapse. \n")
 	return rad, T, W
 
 
 def kinetic( drdy ):
 	return 3./10.*drdy**2
 
-def potential( radius, dotR, ddotR, a, E, Omega_m0, Lambda, gamma, beta ):
-	W = 3./5.*radius*(-3*Omega_m0/(2*a**3*E(Omega_m0, Lambda, a, gamma, beta))*dotR + ddotR)
+def potential( radius, dotR, ddotR, a, E, Omega_m0, Lambda, gamma, beta, delta_rho, M, r, delta_i, n ):
+	W = 3./5.*radius*(-3*Omega_m0/(2*a**3*E(Omega_m0, Lambda, a, gamma, beta, n, f_R0, delta_rho, delta_i, M, radius ))*dotR + ddotR)
 	return W
 
 
-def r( x, y, acceleration, Omega_m0, Lambda, delta_i, E, gamma, beta, M, f_R0, r_iovera_i, delta_rho, n ):
+def r( x, y, acceleration, Omega_m0, Lambda, delta_i, E, gamma, beta, M, f_R0, delta_rho, n ):
 	#input function to be used by odeint. Generic form for a seccond order ode
 	r = x[0]
 	drdy = x[1]
 	a = np.exp(y)
 	rr = [[],[]]
 	rr[0] = drdy
-	rr[1] = acceleration( Omega_m0, Lambda, delta_i, a, r, drdy, E, gamma, beta, M, f_R0, r_iovera_i, delta_rho, n )	
+	rr[1] = acceleration( Omega_m0, Lambda, delta_i, a, r, drdy, E, gamma, beta, M, f_R0, delta_rho, n )	
 
 	return rr
 
 
 
-def findcoll(tolerance, acceleration, model, E, gamma, beta, M, f_R0, r_iovera_i, delta_rho, n, y0, file):
+def findcoll(tolerance, acceleration, model, E, gamma, beta, M, f_R0, delta_rho, n, y0, file):
 
 	#Set initial conditions and time array
 	N = 5000000
@@ -109,9 +119,10 @@ def findcoll(tolerance, acceleration, model, E, gamma, beta, M, f_R0, r_iovera_i
 
 	colltime_max = 10
 
-	delta_max = 0.01
+	delta_max = 0.002
 	delta_min = 0.00000001
 	j = 0
+	c = 0
 
 	while abs(colltime_max) >= abs(tol):
 
@@ -119,32 +130,35 @@ def findcoll(tolerance, acceleration, model, E, gamma, beta, M, f_R0, r_iovera_i
 		delta_mid = (delta_max + delta_min)/2.0
 
 		# solve for deltamax
-		radiusmax = odeint(r, [r0, drdx0], y, args = ( acceleration, Omega_m0, Lambda, delta_max, E, gamma, beta, M, f_R0, r_iovera_i, delta_rho, n) )
+		radiusmax = odeint(r, [r0, drdx0], y, args = ( acceleration, Omega_m0, Lambda, delta_max, E, gamma, beta, M, f_R0, delta_rho, n) )
 
 
 		#solve for deltamin
-		radiusmin = odeint(r, [r0, drdx0], y, args = ( acceleration, Omega_m0, Lambda, delta_min, E, gamma, beta, M, f_R0, r_iovera_i, delta_rho, n) )
+		radiusmin = odeint(r, [r0, drdx0], y, args = ( acceleration, Omega_m0, Lambda, delta_min, E, gamma, beta, M, f_R0, delta_rho, n) )
 
 
 		#solve for deltamid
-		radiusmid = odeint(r, [r0, drdx0], y, args = ( acceleration, Omega_m0, Lambda, delta_mid, E, gamma, beta, M, f_R0, r_iovera_i, delta_rho, n) )
+		radiusmid = odeint(r, [r0, drdx0], y, args = ( acceleration, Omega_m0, Lambda, delta_mid, E, gamma, beta, M, f_R0, delta_rho, n) )
 
 		for i in range(len(radiusmax[:,0])):
 			if radiusmax[i,0] <= 0:
 				colltime_max = y[i]
 				collmax = True
+				#print "max"
 				break
 
 		for i in range(len(radiusmid[:,0])):
 			if radiusmid[i,0] <= 0:
 				colltime_mid = y[i]
 				collmid = True
+				#print "mid"
 				break
 
 		for i in range(len(radiusmin[:,0])):
 			if radiusmin[i,0] <= 0:
 				colltime_min = y[i]
 				collmin = True
+				#print "min"
 				break
 
 		if ( collmax and collmid ):
@@ -162,11 +176,14 @@ def findcoll(tolerance, acceleration, model, E, gamma, beta, M, f_R0, r_iovera_i
 			print "well shiet"
 
 		if ( collmin ):
-			if delta_min == 0:
-				print "Well damn.."
-				delta_max = 0
+		
+			print "Well damn.."
+			#delta_max = 1e-15
+			delta_min *= 1e-4
+			c += 1
+			if c > 10:
 				break
-			delta_min = 0
+			
 			
 
 		#set x_coll, which is returned from findcoll()
@@ -187,41 +204,57 @@ def findcoll(tolerance, acceleration, model, E, gamma, beta, M, f_R0, r_iovera_i
 	file.write("{:1.7e} \n".format(ct))
 	print delta_max
 
-	R = odeint(r, [r0, drdx0], y, args = ( acceleration, Omega_m0, Lambda, delta_max, E, gamma, beta, M, f_R0, r_iovera_i, delta_rho, n ) )
+	R = odeint(r, [r0, drdx0], y, args = ( acceleration, Omega_m0, Lambda, delta_max, E, gamma, beta, M, f_R0, delta_rho, n ) )
 
 	#mpl.plot(y, R[:,0], linewidth = 0.75, label = model)
 	
 
-	rvir, T, W = vircheck( R, y, Omega_m0, Lambda, delta_max, acceleration, E, gamma, beta, M, f_R0, r_iovera_i, delta_rho, n, file )
+	rvir, T, W = vircheck( R, y, Omega_m0, Lambda, delta_max, acceleration, E, gamma, beta, M, f_R0, delta_rho, n, file )
 	if model == "Chameleon":
-		mpl.plot(y, rvir, "-.", linewidth = 0.75, label = r"Chameleon, M = %1.1e, $\frac{r_i}{a_i}$ = %1.0f, $f_{R0}$ = %1.5e" % (M, r_iovera_i, f_R0))
+		mpl.plot(y, rvir, "-.", linewidth = 0.75, label = r"Chameleon, M = %1.0e, $f_{R0} - 1$ = %1.0e, $\delta_i$ = %1.5e" % (M, f_R0 - 1, delta_max))
+		mpl.plot(y, R[:,0], "-.", linewidth = 0.75, label = "Chameleon no vir")
+		Rmin = odeint(r, [r0, drdx0], y, args = ( acceleration, Omega_m0, Lambda, delta_min, E, gamma, beta, M, f_R0, delta_rho, n ) )
+		rvirmin, Tmin, Wmin = vircheck( Rmin, y, Omega_m0, Lambda, delta_min, acceleration, E, gamma, beta, M, f_R0, delta_rho, n, file )
+		mpl.plot(y, rvirmin, "-.", linewidth = 0.75, label = r"Chameleon, M = %1.0e, $f_{R0} - 1$ = %1.0e, $\delta_i$ = %1.5e" % (M, f_R0 - 1, delta_min))
 	elif model == "LCDM":
 		mpl.plot(y, rvir, "--", linewidth = 0.75, label = r"$\Lambda$CDM, $\delta_i$ = %1.5e" % delta_max)
 	elif model == "EdS":
 		mpl.plot(y, rvir, ":", linewidth = 0.75, label = model)
 
-	return T, W, y
+	return T, W, y, delta_max
 
-def d_rho(Omega_m0, delta_i, R, r_iovera_i):
-	return Omega_m0*(1 + delta_i)*r_iovera_i**3/R**3
+def d_rho(Omega_m0, Lambda, delta_i, M, R, beta, n, f_R0):
+	return 2*G*M/(H_0**2*R**3)
 
+def d_rho_complex(Omega_m0, Lambda, delta_i, M, a, beta, n, f_R0):
+	R0 = 3.*H_0**2*(Omega_m0 + 4*Lambda)
+	R_c = np.sqrt(delta_i)*(n + 1)*abs(1 - f_R0)*R0/(2*beta**2)*( (Omega_m0 + 4*Lambda)/(Omega_m0/a**3 + 4*Lambda) )**(n + 2)
+	#R_c = 1e-4
+	return 3.*M/(4.*rho_c0*np.pi*R_c**3)
 
-def LCDMacc( Omega_m0, Lambda, delta_i, a, r, drdy, E, gamma, beta, M, f_R0, r_iovera_i, delta_rho, n ):
+def LCDMacc( Omega_m0, Lambda, delta_i, a, r, drdy, E, gamma, beta, M, f_R0, delta_rho, n ):
 	return (-Omega_m0*(1+delta_i)/(2.*r**2) + r*Lambda + 3./2.*drdy*Omega_m0/a**3)/E(Omega_m0, Lambda, a, 0, 0)
 
 def ELCDMnorad(Omega_m0, Lambda, a, gamma, beta):
 	return Omega_m0/a**3 + Lambda
 
-def chameleonacc( Omega_m0, Lambda, delta_i, a, r, drdy, E, gamma, beta, M, f_R0, r_iovera_i, delta_rho, n ):
-	return  ( Lambda*r - gamma(Omega_m0, Lambda, delta_i, beta, n, M, f_R0, r_iovera_i, delta_rho, r, a, True)*Omega_m0*(1 + delta_i)/(2*r**2) + 3./2.*gamma(Omega_m0, Lambda, 0, beta, 0, 0, 0, 0, 0, 0, 0, False)*Omega_m0*drdy/a**3)/E(Omega_m0, Lambda, a, gamma, beta)
+def chameleonacc( Omega_m0, Lambda, delta_i, a, r, drdy, E, gamma, beta, M, f_R0, delta_rho, n ):
+	return  ( Lambda*r - gamma(Omega_m0, Lambda, delta_i, beta, n, M, f_R0, delta_rho, r, a, True)*Omega_m0*(1 + delta_i)/(2*r**2) + \
+		3./2.*gamma(Omega_m0, Lambda, delta_i, beta, n, M, f_R0, delta_rho, r, a, True)*Omega_m0*drdy/a**3)/E(Omega_m0, Lambda, a, gamma, beta, n, f_R0, delta_rho, delta_i, M, r)
 
-def Echamnorad( Omega_m0, Lambda, a, gamma, beta ):
-	return gamma(Omega_m0, Lambda, 0, beta, 0, 0, 0, 0, 0, 0, 0, False)*Omega_m0/a**3 + Lambda
+def Echamnorad( Omega_m0, Lambda, a, gamma, beta, n, f_R0, delta_rho, delta_i, M, r ):
+	return gamma(Omega_m0, Lambda, delta_i, beta, n, M, f_R0, delta_rho, r, a, True)*Omega_m0/a**3 + Lambda
 
-def gammaHuSawicki1( Omega_m0, Lambda, delta_i, beta, n, M, f_R0, r_iovera_i, delta_rho, r, a, perturbation ):
+first = True
+def gammaHuSawicki1( Omega_m0, Lambda, delta_i, beta, n, M, f_R0, delta_rho, r, a, perturbation ):
 	if perturbation:
-		return 1 - 2*beta**2*( 1- abs(1 - f_R0)*r_iovera_i*r/(12*beta*G*M)*( (Omega_m0 + 4*Lambda)/(delta_rho(Omega_m0, delta_i, r, r_iovera_i) - Omega_m0/a**3) )**(n/(n + 1)) )
+		#print Omega_m0, Lambda, delta_i, beta, n, M, f_R0, delta_rho(M), r, a
+		Phi_N = ( 2*G**4*M**4/( H_0**2*Omega_m0*(1 + delta_i)*r**3 ) )
 
+		return 1 - 2*beta**2*(1 - abs(1-f_R0)/(12*beta**2*Phi_N)*( (Omega_m0 + 4*Lambda)/(delta_rho(Omega_m0, Lambda, delta_i, M, a, beta, n, f_R0) - Omega_m0/a**3) )**(n + 1) )
+		#return 1 - 2*beta**2*( 1- abs(1 - f_R0)*r_iovera_i*r/(12*beta*G*M)*( (Omega_m0 + 4*Lambda)/(delta_rho(Omega_m0, delta_i, r, r_iovera_i) - Omega_m0/a**3) )**(n/(n + 1)) )
+	elif delta_i <= 1e-14:
+		return 1 - 2*beta**2
 	else:
 		return 1 - 2*beta**2
 
@@ -234,38 +267,50 @@ def R_c(Omega_m0, Lambda, delta_i, phi_inf, n, f_R0):
 	return np.sqrt(delta_i)*phi_inf**2*2*(n + 1)/(M_pl**2*(f_R0 - 1)*R_0)*(M_pl*(1 - f_R0)/(2*beta*phi_inf))**(n/(n + 1))
 
 
-tolerance = float(sys.argv[1])
-y0 = np.log(1/(1+float(sys.argv[2])))
+tolerance = 0.01
+y0 = np.log(1./(1.+2740.))
 a_i = np.exp(y0)
 
 #findcoll(tolerance, LCDMacc, "LCDM", ELCDMnorad, y0)
 #findcoll(tolerance, LCDMacc, "EdS", ELCDMnorad, y0)
 
 
+M = 1e14
 
+beta = 1/np.sqrt(6)
+f_R0 = 1.00001
+n = 0.02
+Omega_m0 = 0.25
+Lambda = 0.75
+
+#fileLCDM = open("Numbers\LCDMviracc.txt", "w")
+
+#fileEdS = open("Numbers\EdSvirracc.txt", "w")
+#filecham = open("Numbers\Chameleon10.txt", "w")
+
+#print "Working on chameleon"
+#Tcham, Wcham, y, d_cham = findcoll(tolerance, chameleonacc, "Chameleon", Echamnorad, gammaHuSawicki1, 1/np.sqrt(6), M, 1.00001, d_rho_complex, 0.02, y0, filecham)
+#a = np.exp(y)
 
 """
-
-fileLCDM = open("Numbers\LCDMviracc.txt", "w")
-fileEdS = open("Numbers\EdSvirracc.txt", "w")
-filecham = open("Numbers\Chameleon10.txt", "w")
-
-print "Working on chameleon"
-Tcham, Wcham, y = findcoll(tolerance, chameleonacc, "Chameleon", Echamnorad, gammaHuSawicki1, 1/np.sqrt(6), 1e10, 1.00001, 100, d_rho, 0.1, y0, filecham)
 print "Working on LCDM"
-T1, W1, y = findcoll(tolerance, LCDMacc, "LCDM", ELCDMnorad, 0, 0, 0, 0, 0, 0, 0, y0, fileLCDM)
+T1, W1, y, d_LCDM = findcoll(tolerance, LCDMacc, "LCDM", ELCDMnorad, 0, 0, 0, 0, 0, 0, y0, fileLCDM)
 print "Working on EdS"
-T2, W2, y = findcoll(tolerance, LCDMacc, "EdS", ELCDMnorad, 0, 0, 0, 0, 0, 0, 0, y0, fileEdS)
+T2, W2, y, d_EdS = findcoll(tolerance, LCDMacc, "EdS", ELCDMnorad, 0, 0, 0, 0, 0, 0, y0, fileEdS)
 
 fileLCDM.close()
+
 fileEdS.close()
 filecham.close()
 
 mpl.xlabel("ln(a)")
 mpl.ylabel(r"$\tilde{R}$", rotation = 0)
 mpl.legend()
-mpl.savefig("Figures\Evolution.png")
+mpl.savefig("Figures\Evolution.png", dpi = 1000)
 mpl.clf()
+
+mpl.plot(y, Omega_m0/a**3 - 4*Lambda)
+mpl.show()
 
 mpl.plot(y, T1, "c-", linewidth = 0.75, label = r"$T_{\Lambda CDM}$")
 mpl.plot(y, -W1, "c--", linewidth = 0.75, label = r"$W_{\Lambda CDM}$")
@@ -297,32 +342,64 @@ mpl.legend()
 mpl.savefig("Figures\RelativeEnergies.png")
 mpl.clf()
 """
-r_iovera_i_list = [1, 10, 25, 50, 100]
+mpl.clf()
+N = 5000000
+y = np.linspace(y0, -1e-15, N)
+r0 = np.exp(y0)
+drdx0 = np.exp(y0)
 
-print "On loop over r_i/a_i"
-riloop = open("Numbers\Riloop.txt", "w")
-for rioai in r_iovera_i_list:
-	riloop.write("r_i/a_i = {:1.0f}".format(rioai))
-	Tcham, Wcham, y = findcoll(tolerance, chameleonacc, "Chameleon", Echamnorad, gammaHuSawicki1, 1/np.sqrt(6), 1e10, 1.00001, rioai, d_rho, 0.1, y0, riloop)
-riloop.close()
+"""
+masses = [1e5, 1e10, 1e15, 1e20, 1e25, 1e30]
+#want to loop over masses, but not within the rootfinding. I want a figure showing how Delta=rho_p/rho_b varies with the mass and curvature
+print "On loop over M"
+Mloop = open("Numbers\Massloop.txt", "w")
+for Mass in masses:
+	Mloop.write("M = {:1.1e} \n".format(Mass))
+	rad = odeint(r, [r0, drdx0], y, args = ( chameleonacc, Omega_m0, Lambda, d_cham, Echamnorad, gammaHuSawicki1, beta, Mass, f_R0, d_rho_complex, n) )
+	rvir, T, W = vircheck( rad, y, Omega_m0, Lambda, d_cham, chameleonacc, Echamnorad, gammaHuSawicki1, beta, Mass, f_R0, d_rho_complex, n, Mloop )
+	mpl.plot(y, rvir, linewidth = 0.75, label = r"$M_c$ = %1.1e" % Mass)
+Mloop.close()
 mpl.xlabel("ln(a)")
 mpl.ylabel(r"$\tilde{R}$", rotation = 0)
 mpl.legend()
-mpl.savefig("Figures\Riloop.png")
+mpl.savefig("Figures\Massloop.png")
 mpl.clf()
 
-
 print "Loop over f_R0"
-eps = 5e-5
-f_R0_arr = np.linspace(1 - eps, 1 + eps, 10)
-f_R0_loop = open("Numbers\Loopf_R0.txt", "w")
-for f_R0 in f_R0_arr:
-	f_R0_loop.write("f_R0 = {:1.5e}".format(f_R0))
-	Tcham, Wcham, y = findcoll(tolerance, chameleonacc, "Chameleon", Echamnorad, gammaHuSawicki1, 1/np.sqrt(6), 1e10, f_R0, 100, d_rho, 0.1, y0, f_R0_loop)
-
+M = 1e14
+f_R0_list = np.array([1e-8, 1e-7, 1e-6, 1e-5, 1e-4]) + 1
+f_R0_loop = open("Numbers\Loop_f_R0.txt", "w")
+for f_R0_i in f_R0_list:
+	f_R0_loop.write("f_R0 = {:1.8f} \n".format(f_R0_i))
+	rad = odeint(r, [r0, drdx0], y, args = ( chameleonacc, Omega_m0, Lambda, d_cham, Echamnorad, gammaHuSawicki1, beta, M, f_R0_i, d_rho_complex, n) )
+	rvir, T, W = vircheck( rad, y, Omega_m0, Lambda, d_cham, chameleonacc, Echamnorad, gammaHuSawicki1, beta, M, f_R0_i, d_rho_complex, n, f_R0_loop )
+	mpl.plot(y, rvir, linewidth = 0.75, label = r"$f_{R0}-1$ = %1.1e" % (f_R0_i-1))
 f_R0_loop.close()
 mpl.xlabel("ln(a)")
 mpl.ylabel(r"$\tilde{R}$", rotation = 0)
 mpl.legend()
-mpl.savefig("Figures\Loopf_R0.png")
+mpl.savefig("Figures\Loop_f_R0.png")
 mpl.clf()
+
+M = 1e14
+f_R0 = 1e-4
+n_loop = open("Numbers\Loop_n.txt", "w")
+n_list = np.linspace(1e-3, 1e-1, 5)
+for ns in n_list:
+	n_loop.write("n = {:1.8f} \n".format(n))
+	rad = odeint(r, [r0, drdx0], y, args = ( chameleonacc, Omega_m0, Lambda, d_cham, Echamnorad, gammaHuSawicki1, beta, M, f_R0, d_rho_complex, ns) )
+	rvir, T, W = vircheck( rad, y, Omega_m0, Lambda, d_cham, chameleonacc, Echamnorad, gammaHuSawicki1, beta, M, f_R0, d_rho_complex, ns, n_loop )
+	mpl.plot(y, rvir, linewidth = 0.75, label = r"$n$ = %1.1e" % (ns))
+n_loop.close()
+mpl.xlabel("ln(a)")
+mpl.ylabel(r"$\tilde{R}$", rotation = 0)
+mpl.legend()
+mpl.savefig("Figures\Loop_n.png")
+mpl.clf()
+"""
+
+r = odeint(r, [r0, drdx0], y, args = ( chameleonacc, Omega_m0, Lambda, 1.5e-3, Echamnorad, gammaHuSawicki1, beta, M, f_R0, d_rho_complex, n) )
+a = np.exp(y)
+geff = gammaHuSawicki1(Omega_m0, Lambda, 1.5e-3, beta, n, M, f_R0, d_rho_complex, r[:,0], a, True) - 1
+mpl.plot(y, geff)
+mpl.show()

@@ -1,12 +1,30 @@
-M = 1.0e+05 
-These parameters do not lead to collapse. 
 M = 1.0e+10 
-These parameters do not lead to collapse. 
-M = 1.0e+15 
-These parameters do not lead to collapse. 
+260.95019 
+6.79152 
+4.8487126702e-01 
+1.63615 
+9.18329e-01 
+M = 1.0e+12 
+260.95019 
+6.79152 
+4.8487126702e-01 
+1.63615 
+9.18329e-01 
+M = 1.0e+14 
+260.95019 
+6.79152 
+4.8487126702e-01 
+1.63615 
+9.18329e-01 
+M = 1.0e+16 
+260.95019 
+6.79152 
+4.8487126702e-01 
+1.63615 
+9.18329e-01 
 M = 1.0e+20 
-These parameters do not lead to collapse. 
-M = 1.0e+25 
-These parameters do not lead to collapse. 
-M = 1.0e+30 
-These parameters do not lead to collapse. 
+260.95019 
+6.79152 
+4.8487126702e-01 
+1.63615 
+9.18329e-01 

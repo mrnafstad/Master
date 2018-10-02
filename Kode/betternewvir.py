@@ -8,37 +8,40 @@ from scipy.integrate import odeint
 import sys
 
 """
-H_0 = 22685.5 				#km/s/Mpc
-#H_0 = 1e-42 				#GeV
-G = 6.667e-11				#m^3/kg/s^2 not these units
-M_pl = 1./np.sqrt(8*np.pi*G)
-#	H_0 = 1./M_pl
+H_0 = 3.44e-35				#eV
+G = 6.71e-57				#eV^-2
+M_pl = 2.44e27				#eV
 rho_c0 = 3*H_0**2/(8*np.pi*G)
-M_sun = 2e30
-GtimeM_sun = G*M_sun
+Msun = 2e30*5.61e26
+GtimeM_sun = G*Msun
 """
-#in natural units:
-H_0 = 1.4217e-32						#eV 
-G = 1.0									#1
+#in natural (Planck) units:
+H_0 = 3.44e-35										#eV 
+G = 1.0												#1
 rho_c0 = 3.*H_0**2/(8.*np.pi*G)
-M_sun = 5.291e12 #2.357e14						#eV-1
-GtimeM_sun = G*M_sun
+Msun = 5.291e12 #2.357e14							#eV-1
+M_pl = 1/np.sqrt(8*np.pi)
+GtimeM_sun = G*Msun
+
 """
-G = 6.71e-39
-Msun = 1.99e30*5.61e26
-Mpl = 2.44e18
-H_0 = 1/Mpl
+G = 4.73e-58										#eV^-2, revisit the value of G in NU
+Msun = 1.99e30*1.78e36								#eV, should be 1.12e66
+M_pl = 1/np.sqrt(8*np.pi*G)
+H_0 = 3.44e-35										#eV
 rho_c0 = 3.*H_0**2/(8.*np.pi*G)
 GtimeM_sun = G*Msun
-print H_0, G, rho_c0
 """
+print H_0, G, rho_c0, Msun, M_pl
+
 def vircheck(R, y, Omega_m0, Lambda, delta_i, acceleration, E, gamma, beta, M, f_R0, delta_rho, n, file):
 
 	a = np.exp(y)
 
 	rad = R[:, 0]
 	drdy = R[:, 1]
-	ddrddy = acceleration( Omega_m0, Lambda, delta_i, a, rad, drdy, E, gamma, beta, M, f_R0, delta_rho, n )
+	ddrddy = np.zeros(len(a))
+	for i in range(len(a)):
+		ddrddy[i] = acceleration( Omega_m0, Lambda, delta_i, a[i], rad[i], drdy[i], E, gamma, beta, M, f_R0, delta_rho, n )
 	s = j = np.argmax(rad)
 	W_ta = potential(rad[s], drdy[s], ddrddy[s], a[s], E, Omega_m0, Lambda, gamma, beta, delta_rho, M, r, delta_i, n )
 	T = kinetic(drdy)
@@ -89,21 +92,19 @@ def kinetic( drdy ):
 	return 3./10.*drdy**2
 
 def potential( radius, dotR, ddotR, a, E, Omega_m0, Lambda, gamma, beta, delta_rho, M, r, delta_i, n ):
-	if gamma == 0:
-		W = 3./5.*radius*(-3*Omega_m0/(2*a**3*E(Omega_m0, Lambda, a, gamma, beta))*dotR + ddotR)
-	else:
-		W = 3./5.*radius*(-3*gammaBack(beta)*Omega_m0/(2*a**3*E(Omega_m0, Lambda, a, gamma, beta))*dotR + ddotR)
+	
+	W = 3./5.*radius*(-3*gammaBack(beta)*Omega_m0/(2*a**3*E(Omega_m0, Lambda, a, gamma, beta))*dotR + ddotR)
 	return W
 
 
 def r( x, y, acceleration, Omega_m0, Lambda, delta_i, E, gamma, beta, M, f_R0, delta_rho, n ):
 	#input function to be used by odeint. Generic form for a seccond order ode
-	r = x[0]
+	rad = x[0]
 	drdy = x[1]
 	a = np.exp(y)
 	rr = [[],[]]
 	rr[0] = drdy
-	rr[1] = acceleration( Omega_m0, Lambda, delta_i, a, r, drdy, E, gamma, beta, M, f_R0, delta_rho, n )	
+	rr[1] = acceleration( Omega_m0, Lambda, delta_i, a, rad, drdy, E, gamma, beta, M, f_R0, delta_rho, n )	
 
 	return rr
 
@@ -134,12 +135,12 @@ def findcoll(tolerance, acceleration, model, E, gamma, beta, M, f_R0, delta_rho,
 
 	colltime_max = 10
 
-	delta_max = 0.01
+	delta_max = 0.001
 	delta_min = 0.00000001
 	j = 0
 	c = 0
 
-	while abs(colltime_max) >= abs(tol):
+	while ( abs(colltime_max) >= abs(tol) ):
 
 		#set bisection point
 		delta_mid = (delta_max + delta_min)/2.0
@@ -159,8 +160,11 @@ def findcoll(tolerance, acceleration, model, E, gamma, beta, M, f_R0, delta_rho,
 			if radiusmax[i,0] <= 0:
 				colltime_max = y[i]
 				collmax = True
+				#assert np.isnan(radiusmax[i,0]), "radius is %.3e, delta_max = %.3e" % (radiusmax[i,0], delta_max)
 				#print "max"
 				break
+			else:
+				collmax = False
 
 		for i in range(len(radiusmid[:,0])):
 			if radiusmid[i,0] <= 0:
@@ -168,6 +172,8 @@ def findcoll(tolerance, acceleration, model, E, gamma, beta, M, f_R0, delta_rho,
 				collmid = True
 				#print "mid"
 				break
+			else:
+				collmid = False
 
 		for i in range(len(radiusmin[:,0])):
 			if radiusmin[i,0] <= 0:
@@ -175,6 +181,9 @@ def findcoll(tolerance, acceleration, model, E, gamma, beta, M, f_R0, delta_rho,
 				collmin = True
 				#print "min"
 				break
+			else:
+				collmin = False
+
 
 		if ( collmax and collmid ):
 			#check wether deltamax and deltamid gives collapse
@@ -204,11 +213,11 @@ def findcoll(tolerance, acceleration, model, E, gamma, beta, M, f_R0, delta_rho,
 
 		#set x_coll, which is returned from findcoll()
 		x_coll = colltime_max
-
+		"""
 		collmax = False 
 		collmin = False 
 		collmid = False
-
+		"""
 		
 
 		j += 1
@@ -217,12 +226,16 @@ def findcoll(tolerance, acceleration, model, E, gamma, beta, M, f_R0, delta_rho,
 			print "This may be infinite"
 			break
 
+
 	ct = np.exp(-x_coll) -1
 	file.write("{:1.7f} \n".format(delta_max))
 	file.write("{:1.7e} \n".format(ct))
 	print delta_max
 
 	R = odeint(r, [r0, drdx0], y, args = ( acceleration, Omega_m0, Lambda, delta_max, E, gamma, beta, M, f_R0, delta_rho, n ) )
+	k = np.argmin(R[:,0])
+	print k, R[k,0]
+
 
 	#mpl.plot(y, R[:,0], linewidth = 0.75, label = model)
 	
@@ -245,16 +258,14 @@ def gammaBack(beta):
 	return 1 + 2*beta**2
 
 def d_rho(Omega_m0, Lambda, delta_i, M, R, beta, n, f_R0):
-	#return Omega_m0*(1 + delta_i)/R**3
-	#return 2*M/(H_0**2*R**3)
-	return 3*M/(4*np.pi*rho_c0*R*3)
-
+	return Omega_m0*(1 + delta_i)/R**3 								#This!
+	
 
 def d_rho_complex(Omega_m0, Lambda, delta_i, M, a, beta, n, f_R0):
 	R0 = 3.*H_0**2*(Omega_m0 + 4*Lambda)
 	R_c = np.sqrt(delta_i)*(n + 1)*abs(1 - f_R0)/(2*beta**2*R0)*( (Omega_m0 + 4*Lambda)/(Omega_m0/a**3 + 4*Lambda) )**(n + 2)
 	#R_c = 1e-4
-	return 3.*M/(4.*rho_c0*np.pi*R_c**3)
+	return 3.*M/(4.*rho_c0*np.pi*R_c**3*(2*M/(H_0**2*Omega_m0*(1+delta_i))))
 
 def LCDMacc( Omega_m0, Lambda, delta_i, a, r, drdy, E, gamma, beta, M, f_R0, delta_rho, n ):
 	return (-Omega_m0*(1+delta_i)/(2.*r**2) + r*Lambda + 3./2.*drdy*Omega_m0/a**3)/E(Omega_m0, Lambda, a, 0, 0)
@@ -269,14 +280,44 @@ def chameleonacc( Omega_m0, Lambda, delta_i, a, r, drdy, E, gamma, beta, M, f_R0
 def Echamnorad( Omega_m0, Lambda, a, gamma, beta,  ):
 	return gammaBack(beta)*Omega_m0/a**3 + Lambda
 
+def Phi_N( r, M, Omega_m0, delta_i ):
+	#assert r < 0, "Unphysical radius in Phi_N for %.2e" % delta_i
+	Phi_N = ( (GtimeM_sun*M*H_0)**(2./3.)*(Omega_m0*(1 + delta_i)/2.)**(1./3.)/r )
+	#Phi_N = (M/(np.sqrt(3)*np.pi))**(2./3.)*(2*rho_c0*Omega_m0*(1 + delta_i))**(1./3.)/(M_pl**2*r)
+	return Phi_N
+
+"""
+def DRoverR( Omega_m0, Lambda, delta_i, beta, ):
+	return abs(1-f_R0)/(12*beta**2*Phi)*( (Omega_m0 + 4*Lambda)/(delta - Omega_m0/a**3) )**(n + 1)
+"""
+
 first = True
 values = open("Numbers\Vals.txt", "w")
 def gammaHuSawicki1( Omega_m0, Lambda, delta_i, beta, n, M, f_R0, delta_rho, r, a, perturbation ):
 	
 	#print Omega_m0, Lambda, delta_i, beta, n, M, f_R0, delta_rho(M), r, a
-	Phi_N = ( 1/r*(GtimeM_sun*M*H_0)**(2./3.)*(Omega_m0*(1 + delta_i)/2.)**(1./3.))
+	Phi = Phi_N(r, M, Omega_m0, delta_i)
 	delta = delta_rho(Omega_m0, Lambda, delta_i, M, r, beta, n, f_R0)
-	deltRoverR = abs(1-f_R0)/(12*beta**2*Phi_N)*( (Omega_m0 + 4*Lambda)/(delta - Omega_m0/a**3) )**(n + 1)
+	eps = 1e-40
+
+
+	if not isinstance(a, float):
+		for i in range(len(a)):
+			assert np.isnan(r), "r is NaN"
+			if ( beta**2 <= 0 or Phi[i] < eps or (delta[i] - Omega_m0/a**3) < 0 ):
+				assert (delta - Omega_m0/a**3 < 0), "Delta_rho is probably NaN"
+				deltRoverR = 0
+			else:
+				deltRoverR = abs(1-f_R0)/(12*beta**2*Phi[i])*( (Omega_m0 + 4*Lambda)/(delta[i] - Omega_m0/a[i]**3) )**(n + 1)
+
+	else:
+		if ( beta**2 <= 0 or Phi < eps or delta - Omega_m0/a**3 < 0 ):
+			deltRoverR = 0
+		elif r < 0:
+			deltRoverR = 0
+		else:
+			#assert np.isnan(r), "r is %.2e" % r
+			deltRoverR = abs(1-f_R0)/(12*beta**2*Phi)*( (Omega_m0 + 4*Lambda)/(delta - Omega_m0/a**3) )**(n + 1)
 	#print type(Phi_N), type(delta), type(deltRoverR), type(delta_i)
 	#values.write("{:1.3e}        {:2.3e}         {:2.3e}         {:2.3e} \n".format(float(Phi_N), float(delta), float(deltRoverR), float(delta_i)))
 
@@ -291,8 +332,24 @@ def R_c(Omega_m0, Lambda, delta_i, phi_inf, n, f_R0):
 	R_0 = 3*H_0*(Omega_m0 + 4*Lambda)
 	return np.sqrt(delta_i)*phi_inf**2*2*(n + 1)/(M_pl**2*(f_R0 - 1)*R_0)*(M_pl*(1 - f_R0)/(2*beta*phi_inf))**(n/(n + 1))
 
+def controll( model1, model2, E1, E2, Gamma, beta, M, f_R0, n, delta_rho, delta_i ):
 
-tolerance = 0.01
+	N = 5000000
+	y = np.linspace(y0, -1e-15, N)
+	r0 = np.exp(y0)
+	drdx0 = np.exp(y0)
+
+	f1 = odeint( r, [r0, drdx0], y, args = ( model1, Omega_m0, Lambda, delta_i, E1, Gamma, beta, M, f_R0, delta_rho, n ) )
+	f2 = odeint( r, [r0, drdx0], y, args = ( model2, Omega_m0, Lambda, delta_i, E2, Gamma, beta, M, f_R0, delta_rho, n ) )
+
+	diff = f1[:,0] - f2[:,0]
+
+	mpl.plot(y, diff, "-.", linewidth = 0.75, label = r"$R_{\Lambda CDM} - R_{Cham}$ with $\beta$ = %.2f" % beta)
+	mpl.xlabel("ln(a)")
+	mpl.ylabel("Diff")
+	return
+
+tolerance = 0.001
 y0 = np.log(1e-4)
 a_i = np.exp(y0)
 
@@ -317,6 +374,7 @@ Tcham, Wcham, y, d_cham = findcoll(tolerance, chameleonacc, "Chameleon", Echamno
 a = np.exp(y)
 
 
+
 print "Working on LCDM"
 T1, W1, y, d_LCDM = findcoll(tolerance, LCDMacc, "LCDM", ELCDMnorad, 0, 0, 0, 0, 0, 0, y0, fileLCDM)
 print "Working on EdS"
@@ -335,7 +393,6 @@ mpl.savefig("Figures\Evolution.png", dpi = 1000)
 mpl.clf()
 
 """
-
 mpl.plot(y, T1, "c-", linewidth = 0.75, label = r"$T_{\Lambda CDM}$")
 mpl.plot(y, -W1, "c--", linewidth = 0.75, label = r"$W_{\Lambda CDM}$")
 
@@ -409,12 +466,13 @@ mpl.legend()
 mpl.savefig("Figures\Loop_f_R0.pdf")
 mpl.clf()
 
+print "Loop over n"
 M = 1e14
-f_R0 = 1e-4
+f_R0 = 1 + 1e-5
 n_loop = open("Numbers\Loop_n.txt", "w")
 n_list = np.linspace(1e-4, 1, 5)
 for ns in n_list:
-	n_loop.write("n = {:1.8f} \n".format(n))
+	n_loop.write("n = {:1.8f} \n".format(ns))
 	rad = odeint(r, [r0, drdx0], y, args = ( chameleonacc, Omega_m0, Lambda, d_cham, Echamnorad, gammaHuSawicki1, beta, M, f_R0, d_rho, ns) )
 	rvir, T, W = vircheck( rad, y, Omega_m0, Lambda, d_cham, chameleonacc, Echamnorad, gammaHuSawicki1, beta, M, f_R0, d_rho, ns, n_loop )
 	mpl.plot(y, rvir, linewidth = 0.75, label = r"$n$ = %1.1e" % (ns))
@@ -425,12 +483,41 @@ mpl.legend()
 mpl.savefig("Figures\Loop_n.pdf")
 mpl.clf()
 
-
-r = odeint(r, [r0, drdx0], y, args = ( chameleonacc, Omega_m0, Lambda, d_cham, Echamnorad, gammaHuSawicki1, beta, M, f_R0, d_rho, n) )
+file = open("Numbers\Random.txt", "w")
+rad = odeint(r, [r0, drdx0], y, args = ( chameleonacc, Omega_m0, Lambda, d_cham, Echamnorad, gammaHuSawicki1, beta, M, f_R0, d_rho, n) )
+rvir, T, W = vircheck( rad, y, Omega_m0, Lambda, d_cham, chameleonacc, Echamnorad, gammaHuSawicki1, beta, M, f_R0, d_rho, n, file )
+file.close
 a = np.exp(y)
-geff = gammaHuSawicki1(Omega_m0, Lambda, d_cham, beta, n, M, f_R0, d_rho, r[:,0], a, True) - 1
+geff = np.zeros(len(a))
+for i in range(len(a)):
+	geff[i] = gammaHuSawicki1(Omega_m0, Lambda, d_LCDM, beta, n, M, f_R0, d_rho, rvir[i], a[i], True) - 1
 values.close()
 mpl.plot(a, geff, "-.", linewidth = 0.75)
 mpl.ylabel(r"$\gamma - 1$")
 mpl.xlabel("a")
+mpl.show()
+
+Delta = d_rho( Omega_m0, Lambda, d_cham, M, rvir, beta, n, f_R0 )
+
+mpl.plot(a, Delta, "-.", linewidth = 0.75)
+mpl.ylabel(r"$\Delta_{\rho}$")
+mpl.xlabel("a")
+mpl.show()
+
+phi = Phi_N( rvir, M, Omega_m0, d_cham )
+
+mpl.plot(a, phi, "-.", linewidth = 0.75)
+mpl.ylabel(r"$\Phi_N$")
+mpl.xlabel("a")
+mpl.show()
+print type(Delta), type(phi), len(a), len(Delta), len(phi)
+
+
+print "----"
+controll( LCDMacc, chameleonacc, ELCDMnorad, Echamnorad, gammaHuSawicki1, 0, M, f_R0, n, d_rho, d_cham)
+
+print "----"
+controll( LCDMacc, chameleonacc, ELCDMnorad, Echamnorad, gammaHuSawicki1, 1/np.sqrt(6), M, f_R0, n, d_rho, d_cham)
+
+mpl.legend()
 mpl.show()

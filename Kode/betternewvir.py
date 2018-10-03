@@ -74,15 +74,15 @@ def vircheck(R, y, Omega_m0, Lambda, delta_i, acceleration, E, gamma, beta, M, f
 		odensity = (Omega_m0*(1+delta_i)/rad[k]**3)/(Omega_m0/a[k]**3)
 		odensitymax = (Omega_m0*(1+delta_i)/rad[s]**3)/(Omega_m0/a[s]**3)
 
-		file.write("{:1.5f} \n".format(odensity))
-		file.write("{:1.5f} \n".format(odensitymax))
+		file.write("{:1.15f} \n".format(odensity))
+		file.write("{:1.15f} \n".format(odensitymax))
 
 		rviroverrta = rad[k]/rad[s]
 		aviroverata = a[k]/a[s]
 
-		file.write("{:1.10e} \n".format(rviroverrta))
-		file.write("{:1.5f} \n".format(aviroverata))
-		file.write("{:1.5e} \n".format(a[k]))
+		file.write("{:1.15e} \n".format(rviroverrta))
+		file.write("{:1.15f} \n".format(aviroverata))
+		file.write("{:1.15e} \n".format(a[k]))
 	else:
 		file.write("These parameters do not lead to collapse. \n")
 	return rad, T, W
@@ -261,12 +261,6 @@ def d_rho(Omega_m0, Lambda, delta_i, M, R, beta, n, f_R0):
 	return Omega_m0*(1 + delta_i)/R**3 								#This!
 	
 
-def d_rho_complex(Omega_m0, Lambda, delta_i, M, a, beta, n, f_R0):
-	R0 = 3.*H_0**2*(Omega_m0 + 4*Lambda)
-	R_c = np.sqrt(delta_i)*(n + 1)*abs(1 - f_R0)/(2*beta**2*R0)*( (Omega_m0 + 4*Lambda)/(Omega_m0/a**3 + 4*Lambda) )**(n + 2)
-	#R_c = 1e-4
-	return 3.*M/(4.*rho_c0*np.pi*R_c**3*(2*M/(H_0**2*Omega_m0*(1+delta_i))))
-
 def LCDMacc( Omega_m0, Lambda, delta_i, a, r, drdy, E, gamma, beta, M, f_R0, delta_rho, n ):
 	return (-Omega_m0*(1+delta_i)/(2.*r**2) + r*Lambda + 3./2.*drdy*Omega_m0/a**3)/E(Omega_m0, Lambda, a, 0, 0)
 
@@ -286,10 +280,6 @@ def Phi_N( r, M, Omega_m0, delta_i ):
 	#Phi_N = (M/(np.sqrt(3)*np.pi))**(2./3.)*(2*rho_c0*Omega_m0*(1 + delta_i))**(1./3.)/(M_pl**2*r)
 	return Phi_N
 
-"""
-def DRoverR( Omega_m0, Lambda, delta_i, beta, ):
-	return abs(1-f_R0)/(12*beta**2*Phi)*( (Omega_m0 + 4*Lambda)/(delta - Omega_m0/a**3) )**(n + 1)
-"""
 
 first = True
 values = open("Numbers\Vals.txt", "w")
@@ -326,12 +316,6 @@ def gammaHuSawicki1( Omega_m0, Lambda, delta_i, beta, n, M, f_R0, delta_rho, r, 
 	#return 1 - 2*beta**2*( 1- abs(1 - f_R0)*r_iovera_i*r/(12*beta*G*M)*( (Omega_m0 + 4*Lambda)/(delta_rho(Omega_m0, delta_i, r, r_iovera_i) - Omega_m0/a**3) )**(n/(n + 1)) )
 
 
-	
-
-def R_c(Omega_m0, Lambda, delta_i, phi_inf, n, f_R0):
-	R_0 = 3*H_0*(Omega_m0 + 4*Lambda)
-	return np.sqrt(delta_i)*phi_inf**2*2*(n + 1)/(M_pl**2*(f_R0 - 1)*R_0)*(M_pl*(1 - f_R0)/(2*beta*phi_inf))**(n/(n + 1))
-
 def controll( model1, model2, E1, E2, Gamma, beta, M, f_R0, n, delta_rho, delta_i ):
 
 	N = 5000000
@@ -348,6 +332,44 @@ def controll( model1, model2, E1, E2, Gamma, beta, M, f_R0, n, delta_rho, delta_
 	mpl.xlabel("ln(a)")
 	mpl.ylabel("Diff")
 	return
+
+def placement( filename ):
+
+	file = open(filename, "r")
+	d_vir = []
+	d_ta = []
+	rvirrta = []
+	avirata = []
+	variable = []
+	avir = []
+
+	for j in file.readlines():
+		for i in range(6):
+			try:
+				value = float(j)
+			except ValueError:
+				break
+			if i == 0:
+				variable.append(value)
+			elif i == 1:
+				d_vir.append(value)
+			elif i == 2:
+				d_ta.append(value)
+			elif i == 3:
+				rvirrta.append(value)
+			elif i == 4:
+				avirata.append(value)
+			elif i == 5:
+				avir.append(value)
+
+	file.close()
+	mpl.plot(variable, d_vir, linewidth = 0.75)
+	mpl.xscale("log")
+	mpl.show()
+
+	return 
+
+
 
 tolerance = 0.001
 y0 = np.log(1e-4)
@@ -437,7 +459,7 @@ masses = [ 1e10, 1e12, 1e14, 1e16, 1e20]
 print "On loop over M"
 Mloop = open("Numbers\Massloop.txt", "w")
 for Mass in masses:
-	Mloop.write("M = {:1.1e} \n".format(Mass))
+	Mloop.write("{:1.1f} \n".format(Mass))
 	print  GtimeM_sun*Mass, H_0**2
 	rad = odeint(r, [r0, drdx0], y, args = ( chameleonacc, Omega_m0, Lambda, d_cham, Echamnorad, gammaHuSawicki1, beta, Mass, f_R0, d_rho, n) )
 	rvir, T, W = vircheck( rad, y, Omega_m0, Lambda, d_cham, chameleonacc, Echamnorad, gammaHuSawicki1, beta, Mass, f_R0, d_rho, n, Mloop )
@@ -449,13 +471,16 @@ mpl.legend()
 mpl.savefig("Figures\Massloop.png")
 mpl.clf()
 
+placement("Numbers\Massloop.txt")
 
+
+"""
 print "Loop over f_R0"
 M = 1e14
 f_R0_list = np.array([1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3]) + 1
 f_R0_loop = open("Numbers\Loop_f_R0.txt", "w")
 for f_R0_i in f_R0_list:
-	f_R0_loop.write("f_R0 = {:1.8f} \n".format(f_R0_i))
+	f_R0_loop.write("{:1.8f} \n".format(f_R0_i))
 	rad = odeint(r, [r0, drdx0], y, args = ( chameleonacc, Omega_m0, Lambda, d_cham, Echamnorad, gammaHuSawicki1, beta, M, f_R0_i, d_rho, n) )
 	rvir, T, W = vircheck( rad, y, Omega_m0, Lambda, d_cham, chameleonacc, Echamnorad, gammaHuSawicki1, beta, M, f_R0_i, d_rho, n, f_R0_loop )
 	mpl.plot(y, rvir, linewidth = 0.75, label = r"$f_{R0}-1$ = %1.1e" % (f_R0_i-1))
@@ -472,7 +497,7 @@ f_R0 = 1 + 1e-5
 n_loop = open("Numbers\Loop_n.txt", "w")
 n_list = np.linspace(1e-4, 1, 5)
 for ns in n_list:
-	n_loop.write("n = {:1.8f} \n".format(ns))
+	n_loop.write("{:1.8f} \n".format(ns))
 	rad = odeint(r, [r0, drdx0], y, args = ( chameleonacc, Omega_m0, Lambda, d_cham, Echamnorad, gammaHuSawicki1, beta, M, f_R0, d_rho, ns) )
 	rvir, T, W = vircheck( rad, y, Omega_m0, Lambda, d_cham, chameleonacc, Echamnorad, gammaHuSawicki1, beta, M, f_R0, d_rho, ns, n_loop )
 	mpl.plot(y, rvir, linewidth = 0.75, label = r"$n$ = %1.1e" % (ns))
@@ -521,3 +546,4 @@ controll( LCDMacc, chameleonacc, ELCDMnorad, Echamnorad, gammaHuSawicki1, 1/np.s
 
 mpl.legend()
 mpl.show()
+"""

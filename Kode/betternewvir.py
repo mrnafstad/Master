@@ -16,11 +16,11 @@ Msun = 2e30*5.61e26
 GtimeM_sun = G*Msun
 """
 #in natural (Planck) units:
-H_0 = 3.44e-35										#eV 
+H_0 = 9.369e-32										#eV 
 G = 1.0												#1
 rho_c0 = 3.*H_0**2/(8.*np.pi*G)
-Msun = 5.291e12 #2.357e14							#eV-1
-M_pl = 1/np.sqrt(8*np.pi)
+Msun = 1.989e30*5.977e-22 #2.357e14							#eV-1
+M_pl = 2.176e-8*5.977e-22 #1/np.sqrt(8*np.pi)
 GtimeM_sun = G*Msun
 
 """
@@ -276,8 +276,10 @@ def Echamnorad( Omega_m0, Lambda, a, gamma, beta,  ):
 
 def Phi_N( r, M, Omega_m0, delta_i ):
 	#assert r < 0, "Unphysical radius in Phi_N for %.2e" % delta_i
-	Phi_N = ( (GtimeM_sun*M*H_0)**(2./3.)*(Omega_m0*(1 + delta_i)/2.)**(1./3.)/r )
+	#Phi_N = ( (GtimeM_sun*M*H_0)**(2./3.)*(Omega_m0*(1 + delta_i)/2.)**(1./3.)/r )
 	#Phi_N = (M/(np.sqrt(3)*np.pi))**(2./3.)*(2*rho_c0*Omega_m0*(1 + delta_i))**(1./3.)/(M_pl**2*r)
+	#Phi_N = ( 2*M*np.sqrt(Omega_m0*(1 + delta_i))/H_0**2 )**(2./3.)*rho_c0/(6*M_pl**2*r)
+	Phi_N = (M**2*H_0**2*Omega_m0*(1 + delta_i)/2)**(1./3.)/r
 	return Phi_N
 
 
@@ -294,14 +296,14 @@ def gammaHuSawicki1( Omega_m0, Lambda, delta_i, beta, n, M, f_R0, delta_rho, r, 
 	if not isinstance(a, float):
 		for i in range(len(a)):
 			assert np.isnan(r), "r is NaN"
-			if ( beta**2 <= 0 or Phi[i] < eps or (delta[i] - Omega_m0/a**3) < 0 ):
+			if ( beta**2 <= 0 ): #or Phi[i] < eps or (delta[i] - Omega_m0/a**3) < 0 ):
 				assert (delta - Omega_m0/a**3 < 0), "Delta_rho is probably NaN"
 				deltRoverR = 0
 			else:
 				deltRoverR = abs(1-f_R0)/(12*beta**2*Phi[i])*( (Omega_m0 + 4*Lambda)/(delta[i] - Omega_m0/a[i]**3) )**(n + 1)
 
 	else:
-		if ( beta**2 <= 0 or Phi < eps or delta - Omega_m0/a**3 < 0 ):
+		if ( beta**2 <= 0 ): #or Phi < eps or delta - Omega_m0/a**3 < 0 ):
 			deltRoverR = 0
 		elif r < 0:
 			deltRoverR = 0
@@ -312,7 +314,7 @@ def gammaHuSawicki1( Omega_m0, Lambda, delta_i, beta, n, M, f_R0, delta_rho, r, 
 	#values.write("{:1.3e}        {:2.3e}         {:2.3e}         {:2.3e} \n".format(float(Phi_N), float(delta), float(deltRoverR), float(delta_i)))
 
 
-	return 1 + 2*beta**2*( 1 - deltRoverR**3 )
+	return 1 + 2*beta**2*( deltRoverR**3 )
 	#return 1 - 2*beta**2*( 1- abs(1 - f_R0)*r_iovera_i*r/(12*beta*G*M)*( (Omega_m0 + 4*Lambda)/(delta_rho(Omega_m0, delta_i, r, r_iovera_i) - Omega_m0/a**3) )**(n/(n + 1)) )
 
 
@@ -386,7 +388,7 @@ f_R0 = 1.00001
 n = 0.02
 Omega_m0 = 0.25
 Lambda = 0.75
-
+"""
 fileLCDM = open("Numbers\LCDMviracc.txt", "w")
 
 fileEdS = open("Numbers\EdSvirracc.txt", "w")
@@ -414,7 +416,7 @@ mpl.legend()
 mpl.savefig("Figures\Evolution.png", dpi = 1000)
 mpl.clf()
 
-"""
+
 mpl.plot(y, T1, "c-", linewidth = 0.75, label = r"$T_{\Lambda CDM}$")
 mpl.plot(y, -W1, "c--", linewidth = 0.75, label = r"$W_{\Lambda CDM}$")
 
@@ -453,7 +455,7 @@ y = np.linspace(y0, -1e-15, N)
 r0 = np.exp(y0)
 drdx0 = np.exp(y0)
 
-
+"""
 masses = [ 1e10, 1e12, 1e14, 1e16, 1e20]
 #want to loop over masses, but not within the rootfinding. I want a figure showing how Delta=rho_p/rho_b varies with the mass and curvature
 print "On loop over M"
@@ -474,7 +476,7 @@ mpl.clf()
 placement("Numbers\Massloop.txt")
 
 
-"""
+
 print "Loop over f_R0"
 M = 1e14
 f_R0_list = np.array([1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3]) + 1
@@ -508,17 +510,28 @@ mpl.legend()
 mpl.savefig("Figures\Loop_n.pdf")
 mpl.clf()
 
+"""
+d_cham = 5.73246e-4
 file = open("Numbers\Random.txt", "w")
 rad = odeint(r, [r0, drdx0], y, args = ( chameleonacc, Omega_m0, Lambda, d_cham, Echamnorad, gammaHuSawicki1, beta, M, f_R0, d_rho, n) )
 rvir, T, W = vircheck( rad, y, Omega_m0, Lambda, d_cham, chameleonacc, Echamnorad, gammaHuSawicki1, beta, M, f_R0, d_rho, n, file )
 file.close
 a = np.exp(y)
+mpl.plot(a, rvir, linewidth = 0.75)
+mpl.ylabel(r"$\tilde{R}$")
+mpl.xlabel("a")
+mpl.xscale("log")
+mpl.show()
+
+
+
 geff = np.zeros(len(a))
 for i in range(len(a)):
-	geff[i] = gammaHuSawicki1(Omega_m0, Lambda, d_LCDM, beta, n, M, f_R0, d_rho, rvir[i], a[i], True) - 1
+	geff[i] = gammaHuSawicki1(Omega_m0, Lambda, d_cham, beta, n, M, f_R0, d_rho, rvir[i], a[i], True) - 1
 values.close()
 mpl.plot(a, geff, "-.", linewidth = 0.75)
 mpl.ylabel(r"$\gamma - 1$")
+mpl.xscale("log")
 mpl.xlabel("a")
 mpl.show()
 
@@ -526,6 +539,7 @@ Delta = d_rho( Omega_m0, Lambda, d_cham, M, rvir, beta, n, f_R0 )
 
 mpl.plot(a, Delta, "-.", linewidth = 0.75)
 mpl.ylabel(r"$\Delta_{\rho}$")
+mpl.xscale("log")
 mpl.xlabel("a")
 mpl.show()
 
@@ -533,6 +547,7 @@ phi = Phi_N( rvir, M, Omega_m0, d_cham )
 
 mpl.plot(a, phi, "-.", linewidth = 0.75)
 mpl.ylabel(r"$\Phi_N$")
+mpl.xscale("log")
 mpl.xlabel("a")
 mpl.show()
 print type(Delta), type(phi), len(a), len(Delta), len(phi)
@@ -546,4 +561,3 @@ controll( LCDMacc, chameleonacc, ELCDMnorad, Echamnorad, gammaHuSawicki1, 1/np.s
 
 mpl.legend()
 mpl.show()
-"""

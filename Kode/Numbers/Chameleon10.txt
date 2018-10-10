@@ -1,0 +1,3 @@
+0.0010000 
+-9.9995460e-01 
+These parameters do not lead to collapse. 

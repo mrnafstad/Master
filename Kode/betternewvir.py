@@ -1,3 +1,8 @@
+"""
+cd c:\Users\Halvor\Documents\Master\Kode\
+python betternewvir.py
+
+"""
 #import numpy for array handling
 import numpy as np				
 #import matplotlib for figures											
@@ -24,10 +29,12 @@ M_pl = 2.176e-8*5.977e-22 #1/np.sqrt(8*np.pi)
 GtimeM_sun = G*Msun
 
 """
-G = 4.73e-58										#eV^-2, revisit the value of G in NU
-Msun = 1.99e30*1.78e36								#eV, should be 1.12e66
-M_pl = 1/np.sqrt(8*np.pi*G)
-H_0 = 3.44e-35										#eV
+hbar = 6.58e-16
+c = 3e8
+G = 6.71e-39										#eV^-2, revisit the value of G in NU
+Msun = 1.99e30*5.61e26								#eV, should be 1.12e66
+M_pl = 2.44e18
+H_0 = 70/3.09e19*1.519e15							#eV
 rho_c0 = 3.*H_0**2/(8.*np.pi*G)
 GtimeM_sun = G*Msun
 """
@@ -43,9 +50,9 @@ def vircheck(R, y, Omega_m0, Lambda, delta_i, acceleration, E, gamma, beta, M, f
 	for i in range(len(a)):
 		ddrddy[i] = acceleration( Omega_m0, Lambda, delta_i, a[i], rad[i], drdy[i], E, gamma, beta, M, f_R0, delta_rho, n )
 	s = j = np.argmax(rad)
-	W_ta = potential(rad[s], drdy[s], ddrddy[s], a[s], E, Omega_m0, Lambda, gamma, beta, delta_rho, M, r, delta_i, n )
+	W_ta = potential(rad[s], drdy[s], ddrddy[s], a[s], E, Omega_m0, Lambda, gamma, beta, delta_rho, M, delta_i, n )
 	T = kinetic(drdy)
-	W = potential(rad, drdy, ddrddy, a, E, Omega_m0, Lambda, gammaBack, beta, delta_rho, M, r, delta_i, n)
+	W = potential(rad, drdy, ddrddy, a, E, Omega_m0, Lambda, gamma, beta, delta_rho, M, delta_i, n)
 
 	
 
@@ -58,6 +65,10 @@ def vircheck(R, y, Omega_m0, Lambda, delta_i, acceleration, E, gamma, beta, M, f
 			i = k = j
 			vir = True
 
+		elif ( 2*T[j] < W[j] and not vir ):
+
+			i = k = j
+			vir = True
 
 		j += 1
 	
@@ -91,9 +102,9 @@ def vircheck(R, y, Omega_m0, Lambda, delta_i, acceleration, E, gamma, beta, M, f
 def kinetic( drdy ):
 	return 3./10.*drdy**2
 
-def potential( radius, dotR, ddotR, a, E, Omega_m0, Lambda, gamma, beta, delta_rho, M, r, delta_i, n ):
+def potential( radius, dotR, ddotR, a, E, Omega_m0, Lambda, gamma, beta, delta_rho, M, delta_i, n ):
 	
-	W = 3./5.*radius*(-3*gammaBack(beta)*Omega_m0/(2*a**3*E(Omega_m0, Lambda, a, gamma, beta))*dotR + ddotR)
+	W = 3./5.*radius*(-3*gamma(Omega_m0, Lambda, delta_i, beta, n, M, f_R0, delta_rho, radius, a, False)*Omega_m0/(2*a**3*E(Omega_m0, Lambda, a, gamma, beta, n, M, f_R0, delta_rho, radius))*dotR + ddotR)
 	return W
 
 
@@ -257,7 +268,7 @@ def findcoll(tolerance, acceleration, model, E, gamma, beta, M, f_R0, delta_rho,
 def gammaBack(beta):
 	return 1 + 2*beta**2
 
-def d_rho(Omega_m0, Lambda, delta_i, M, R, beta, n, f_R0):
+def d_rho(Omega_m0, Lambda, delta_i, R):
 	return Omega_m0*(1 + delta_i)/R**3 								#This!
 	
 
@@ -268,55 +279,103 @@ def ELCDMnorad(Omega_m0, Lambda, a, gamma, beta):
 	return Omega_m0/a**3 + Lambda
 
 def chameleonacc( Omega_m0, Lambda, delta_i, a, r, drdy, E, gamma, beta, M, f_R0, delta_rho, n ):
-	return  ( Lambda*r - gamma(Omega_m0, Lambda, delta_i, beta, n, M, f_R0, delta_rho, r, a, True)*Omega_m0*(1 + delta_i)/(2*r**2) + \
-		3./2.*gammaBack(beta)*Omega_m0*drdy/a**3)/E(Omega_m0, Lambda, a, gammaBack, beta)
+	return  ( Lambda*r - gamma( Omega_m0, Lambda, delta_i, beta, n, M, f_R0, delta_rho, r, a, True )*Omega_m0*(1 + delta_i)/(2*r**2) + \
+		3./2.*gamma( Omega_m0, Lambda, 0, beta, n, M, f_R0, delta_rho, r, a, False )*Omega_m0*drdy/a**3)/E(Omega_m0, Lambda, a, gamma, beta, n, M, f_R0, delta_rho, r)
 
-def Echamnorad( Omega_m0, Lambda, a, gamma, beta,  ):
-	return gammaBack(beta)*Omega_m0/a**3 + Lambda
+def Echamnorad( Omega_m0, Lambda, a, gamma, beta, n, M, f_R0, delta_rho, r ):
+	return gamma( Omega_m0, Lambda, 0, beta, n, M, f_R0, delta_rho, r, a, False )*Omega_m0/a**3 + Lambda
 
 def Phi_N( r, M, Omega_m0, delta_i ):
 	#assert r < 0, "Unphysical radius in Phi_N for %.2e" % delta_i
 	#Phi_N = ( (GtimeM_sun*M*H_0)**(2./3.)*(Omega_m0*(1 + delta_i)/2.)**(1./3.)/r )
 	#Phi_N = (M/(np.sqrt(3)*np.pi))**(2./3.)*(2*rho_c0*Omega_m0*(1 + delta_i))**(1./3.)/(M_pl**2*r)
 	#Phi_N = ( 2*M*np.sqrt(Omega_m0*(1 + delta_i))/H_0**2 )**(2./3.)*rho_c0/(6*M_pl**2*r)
-	Phi_N = (M**2*H_0**2*Omega_m0*(1 + delta_i)/2)**(1./3.)/r
+	Phi_N = ((G*M*H_0)**2*Omega_m0*(1 + delta_i)/2)**(1./3.)/r
 	return Phi_N
+
+def phi_cham( Omega_m0, Lambda, delta_i, beta, n, M, f_R0, r, a, delta_rho):
+	if delta_i == 0:
+		delta = delta_rho(Omega_m0, Lambda, 0, a)
+	else:
+		delta = delta_rho(Omega_m0, Lambda, delta_i, r)
+
+	phi = M_pl*abs(1 - f_R0)/(2*beta)*( (Omega_m0 + 4*Lambda)/(delta + 4*Lambda) )**(n + 1)
+
+	return phi
+
+def DROR( Omega_m0, Lambda, delta_i, beta, n, M, f_R0, r, a, delta_rho, perturbation ):
+
+	if beta**2 <= 0:
+		return 0
+
+	else:
+		if perturbation:			
+			Phi = Phi_N(r, M, Omega_m0, delta_i)
+			phi_c = phi_cham(Omega_m0, Lambda, delta_i, beta, n, M, f_R0, r, a, delta_rho)
+			phi_inf = phi_cham(Omega_m0, Lambda, 0, beta, n, M, f_R0, r, a, delta_rho)
+			d = abs( phi_inf - phi_c )/(6*beta*M_pl*Phi)
+
+
+		else:
+			
+			phi_c = 0
+			Phi = Phi_N(r, M, Omega_m0, delta_i)
+			phi_inf = phi_cham(Omega_m0, Lambda, 0, beta, n, M, f_R0, r, a, delta_rho)
+			d = abs( phi_inf - phi_c )/(6*beta*M_pl*Phi)
+			
+			#d = 1
+		
+		try:
+			for i in range(len(a)):
+				if d[i] < 0:
+					d[i] = 0
+				elif d[i] > 1:
+					d[i] = 1
+		except:
+			if d < 0:
+				d = 0
+			elif d > 1:
+				d = 1
+
+		
+		return d
+
+def DRORsymm( Omega_m0, Lambda, delta_i, g, M, M_phi, r, delta_rho ):
+	delta = delta_rho(Omega_m0, Lambda, delta_i, r)
+	mu = M_pl*H_0/M_phi
+	L = M_pl**4*H_0**2/M_phi**6
+	try:
+		if delta > M_phi**2*mu**2:
+			return 0
+		elif delta < 1e-8:
+			Phi = Phi_N(r, M, Omega_m0, delta_i)
+			d = mu/(np.sqrt(L)*6*g*M_pl*Phi)
+			return d
+	except:
+		for i in range(len(r)):
+			if delta[i] > M_phi**2*mu**2:
+				return 0
+			elif delta[i] < 1e-8:
+				Phi[i] = Phi_N(r[i], M, Omega_m0, delta_i)
+				d = mu/(np.sqrt(L)*6*g*M_pl*Phi[i])
+				return d			
 
 
 first = True
 values = open("Numbers\Vals.txt", "w")
 def gammaHuSawicki1( Omega_m0, Lambda, delta_i, beta, n, M, f_R0, delta_rho, r, a, perturbation ):
 	
-	#print Omega_m0, Lambda, delta_i, beta, n, M, f_R0, delta_rho(M), r, a
-	Phi = Phi_N(r, M, Omega_m0, delta_i)
-	delta = delta_rho(Omega_m0, Lambda, delta_i, M, r, beta, n, f_R0)
-	eps = 1e-40
+	deltRoverR = DROR( Omega_m0, Lambda, delta_i, beta, n, M, f_R0, r, a, delta_rho, perturbation )
 
+	return 1 + 2*beta**2*( 3*deltRoverR )
 
-	if not isinstance(a, float):
-		for i in range(len(a)):
-			assert np.isnan(r), "r is NaN"
-			if ( beta**2 <= 0 ): #or Phi[i] < eps or (delta[i] - Omega_m0/a**3) < 0 ):
-				assert (delta - Omega_m0/a**3 < 0), "Delta_rho is probably NaN"
-				deltRoverR = 0
-			else:
-				deltRoverR = abs(1-f_R0)/(12*beta**2*Phi[i])*( (Omega_m0 + 4*Lambda)/(delta[i] - Omega_m0/a[i]**3) )**(n + 1)
+def gamma_symm( Omega_m0, Lambda, delta_i, g, n, M, M_phi, delta_rho, r, a, perturbation ):
+	#In comparison to chameleon, g -> beta, M_phi -> f_R0 notationally
 
-	else:
-		if ( beta**2 <= 0 ): #or Phi < eps or delta - Omega_m0/a**3 < 0 ):
-			deltRoverR = 0
-		elif r < 0:
-			deltRoverR = 0
-		else:
-			#assert np.isnan(r), "r is %.2e" % r
-			deltRoverR = abs(1-f_R0)/(12*beta**2*Phi)*( (Omega_m0 + 4*Lambda)/(delta - Omega_m0/a**3) )**(n + 1)
-	#print type(Phi_N), type(delta), type(deltRoverR), type(delta_i)
-	#values.write("{:1.3e}        {:2.3e}         {:2.3e}         {:2.3e} \n".format(float(Phi_N), float(delta), float(deltRoverR), float(delta_i)))
+	deltaR_overR = DRORsymm( Omega_m0, Lambda, delta_i, g, M, M_phi, r, delta_rho )
 
-
-	return 1 + 2*beta**2*( deltRoverR**3 )
-	#return 1 - 2*beta**2*( 1- abs(1 - f_R0)*r_iovera_i*r/(12*beta*G*M)*( (Omega_m0 + 4*Lambda)/(delta_rho(Omega_m0, delta_i, r, r_iovera_i) - Omega_m0/a**3) )**(n/(n + 1)) )
-
+	return 1 + 2*g**2*( 3*deltaR_overR )
+	
 
 def controll( model1, model2, E1, E2, Gamma, beta, M, f_R0, n, delta_rho, delta_i ):
 
@@ -324,15 +383,17 @@ def controll( model1, model2, E1, E2, Gamma, beta, M, f_R0, n, delta_rho, delta_
 	y = np.linspace(y0, -1e-15, N)
 	r0 = np.exp(y0)
 	drdx0 = np.exp(y0)
+	a = np.exp(y)
 
 	f1 = odeint( r, [r0, drdx0], y, args = ( model1, Omega_m0, Lambda, delta_i, E1, Gamma, beta, M, f_R0, delta_rho, n ) )
 	f2 = odeint( r, [r0, drdx0], y, args = ( model2, Omega_m0, Lambda, delta_i, E2, Gamma, beta, M, f_R0, delta_rho, n ) )
 
 	diff = f1[:,0] - f2[:,0]
 
-	mpl.plot(y, diff, "-.", linewidth = 0.75, label = r"$R_{\Lambda CDM} - R_{Cham}$ with $\beta$ = %.2f" % beta)
-	mpl.xlabel("ln(a)")
+	mpl.plot(a, diff, "-.", linewidth = 0.75, label = r"$R_{\Lambda CDM} - R_{Cham}$ with $\beta$ = %.2f" % beta)
+	mpl.xlabel("a")
 	mpl.ylabel("Diff")
+	mpl.xscale("log")
 	return
 
 def placement( filename ):
@@ -388,6 +449,7 @@ f_R0 = 1.00001
 n = 0.02
 Omega_m0 = 0.25
 Lambda = 0.75
+
 """
 fileLCDM = open("Numbers\LCDMviracc.txt", "w")
 
@@ -415,7 +477,6 @@ mpl.ylabel(r"$\tilde{R}$", rotation = 0)
 mpl.legend()
 mpl.savefig("Figures\Evolution.png", dpi = 1000)
 mpl.clf()
-
 
 mpl.plot(y, T1, "c-", linewidth = 0.75, label = r"$T_{\Lambda CDM}$")
 mpl.plot(y, -W1, "c--", linewidth = 0.75, label = r"$W_{\Lambda CDM}$")
@@ -512,12 +573,22 @@ mpl.clf()
 
 """
 d_cham = 5.73246e-4
+#d_cham = 8e-4
+
+M_S = 1e-4*M_pl
+
 file = open("Numbers\Random.txt", "w")
 rad = odeint(r, [r0, drdx0], y, args = ( chameleonacc, Omega_m0, Lambda, d_cham, Echamnorad, gammaHuSawicki1, beta, M, f_R0, d_rho, n) )
-rvir, T, W = vircheck( rad, y, Omega_m0, Lambda, d_cham, chameleonacc, Echamnorad, gammaHuSawicki1, beta, M, f_R0, d_rho, n, file )
+rvircham, T, W = vircheck( rad, y, Omega_m0, Lambda, d_cham, chameleonacc, Echamnorad, gammaHuSawicki1, beta, M, f_R0, d_rho, n, file )
+
+rad = odeint(r, [r0, drdx0], y, args = ( chameleonacc, Omega_m0, Lambda, d_cham, Echamnorad, gamma_symm, beta, M, M_S, d_rho, n) )
+rvirsymm, T, W = vircheck( rad, y, Omega_m0, Lambda, d_cham, chameleonacc, Echamnorad, gamma_symm, beta, M, M_S, d_rho, n, file )
+
 file.close
 a = np.exp(y)
-mpl.plot(a, rvir, linewidth = 0.75)
+mpl.plot(a, rvircham, linewidth = 0.75, label = "Chameleon")
+mpl.plot(a, rvirsymm, linewidth = 0.75, label = "Symmetron")
+mpl.legend()
 mpl.ylabel(r"$\tilde{R}$")
 mpl.xlabel("a")
 mpl.xscale("log")
@@ -525,29 +596,59 @@ mpl.show()
 
 
 
-geff = np.zeros(len(a))
+
+geff_cham = np.zeros(len(a))
+DRoR_cham = np.zeros(len(a))
+geff_symm = np.zeros(len(a))
+DRoR_symm = np.zeros(len(a))
 for i in range(len(a)):
-	geff[i] = gammaHuSawicki1(Omega_m0, Lambda, d_cham, beta, n, M, f_R0, d_rho, rvir[i], a[i], True) - 1
+	geff_cham[i] = gammaHuSawicki1(Omega_m0, Lambda, d_cham, beta, n, M, f_R0, d_rho, rvircham[i], a[i], True) - 1
+	geff_symm[i] = gamma_symm(Omega_m0, Lambda, d_cham, beta, n, M, M_S, d_rho, rvirsymm[i], a[i], True) - 1
+	DRoR_cham[i] = DROR(Omega_m0, Lambda, d_cham, beta, n, M, f_R0, rvircham[i], a[i], d_rho, True) 
+	DRoR_symm[i] = DRORsymm(Omega_m0, Lambda, d_cham, beta, M, M_S, rvirsymm[i], d_rho ) 
 values.close()
-mpl.plot(a, geff, "-.", linewidth = 0.75)
+mpl.subplot(2, 2, 1)
+mpl.plot(a, geff_cham, "-.", linewidth = 0.75, label = "Chameleon")
+mpl.plot(a, geff_symm, "--", linewidth = 0.75, label = "Symmetron")
+mpl.legend()
 mpl.ylabel(r"$\gamma - 1$")
 mpl.xscale("log")
 mpl.xlabel("a")
-mpl.show()
+mpl.yscale("log")
 
-Delta = d_rho( Omega_m0, Lambda, d_cham, M, rvir, beta, n, f_R0 )
 
-mpl.plot(a, Delta, "-.", linewidth = 0.75)
+mpl.subplot(2, 2, 2)
+mpl.plot(a, DRoR_cham, "-.", linewidth = 0.75, label = "Chameleon")
+mpl.plot(a, DRoR_symm, "--", linewidth = 0.75, label = "Symmetron")
+mpl.legend()
+mpl.ylabel(r"$\frac{\Delta R}{R}$")
+mpl.xlabel("a")
+mpl.xscale("log")
+mpl.yscale("log")
+
+
+Delta_cham = d_rho( Omega_m0, Lambda, d_cham, rvircham )
+Delta_symm = d_rho( Omega_m0, Lambda, d_cham, rvirsymm )
+
+mpl.subplot(2, 2, 3)
+mpl.plot(a, Delta_cham, "-.", linewidth = 0.75, label = "Chameleon")
+mpl.plot(a, Delta_symm, "--", linewidth = 0.75, label = "Symmetron")
+mpl.legend()
 mpl.ylabel(r"$\Delta_{\rho}$")
 mpl.xscale("log")
+mpl.yscale("log")
 mpl.xlabel("a")
-mpl.show()
 
-phi = Phi_N( rvir, M, Omega_m0, d_cham )
 
-mpl.plot(a, phi, "-.", linewidth = 0.75)
+phi_cham = Phi_N( rvircham, M, Omega_m0, d_cham )
+Phi_symm = Phi_N( rvirsymm, M, Omega_m0, d_cham)
+
+mpl.subplot(2, 2, 4)
+mpl.plot(a, phi_cham, "-.", linewidth = 0.75, label = "Chameleon")
+mpl.plot(a, Phi_symm, "-", linewidth = 0.75, label = "Symmetron")
 mpl.ylabel(r"$\Phi_N$")
 mpl.xscale("log")
+mpl.yscale("log")
 mpl.xlabel("a")
 mpl.show()
 print type(Delta), type(phi), len(a), len(Delta), len(phi)

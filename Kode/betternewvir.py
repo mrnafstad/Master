@@ -91,9 +91,9 @@ def vircheck(R, y, Omega_m0, Lambda, delta_i, acceleration, E, gamma, beta, M, f
 		rviroverrta = rad[k]/rad[s]
 		aviroverata = a[k]/a[s]
 
-		file.write("{:1.15e} \n".format(rviroverrta))
+		file.write("{:1.15f} \n".format(rviroverrta))
 		file.write("{:1.15f} \n".format(aviroverata))
-		file.write("{:1.15e} \n".format(a[k]))
+		file.write("{:1.15f} \n".format(a[k]))
 	else:
 		file.write("These parameters do not lead to collapse. \n")
 	return rad, T, W
@@ -104,7 +104,7 @@ def kinetic( drdy ):
 
 def potential( radius, dotR, ddotR, a, E, Omega_m0, Lambda, gamma, beta, delta_rho, M, delta_i, n ):
 	
-	W = 3./5.*radius*(-3*gamma(Omega_m0, Lambda, delta_i, beta, n, M, f_R0, delta_rho, radius, a, False)*Omega_m0/(2*a**3*E(Omega_m0, Lambda, a, gamma, beta, n, M, f_R0, delta_rho, radius))*dotR + ddotR)
+	W = 3./5.*radius*(-3*gamma( Omega_m0, Lambda, delta_i, beta, n, M, f_R0, delta_rho, a, a, True )*Omega_m0/(2*a**3*E(Omega_m0, Lambda, a, gamma, beta, n, M, f_R0, delta_rho, radius))*dotR + ddotR)
 	return W
 
 
@@ -266,24 +266,24 @@ def findcoll(tolerance, acceleration, model, E, gamma, beta, M, f_R0, delta_rho,
 	return T, W, y, delta_max
 
 def gammaBack(beta):
-	return 1 + 2*beta**2
+	return 1 
 
 def d_rho(Omega_m0, Lambda, delta_i, R):
 	return Omega_m0*(1 + delta_i)/R**3 								#This!
 	
 
 def LCDMacc( Omega_m0, Lambda, delta_i, a, r, drdy, E, gamma, beta, M, f_R0, delta_rho, n ):
-	return (-Omega_m0*(1+delta_i)/(2.*r**2) + r*Lambda + 3./2.*drdy*Omega_m0/a**3)/E(Omega_m0, Lambda, a, 0, 0)
+	return (-Omega_m0*(1+delta_i)/(2.*r**2) + r*Lambda + 3./2.*drdy*Omega_m0/a**3)/E(Omega_m0, Lambda, a, 0, 0, 0, 0, 0, 0, 0 )
 
-def ELCDMnorad(Omega_m0, Lambda, a, gamma, beta):
+def ELCDMnorad(Omega_m0, Lambda, a, gamma, beta, s, t, u, v, w):
 	return Omega_m0/a**3 + Lambda
 
 def chameleonacc( Omega_m0, Lambda, delta_i, a, r, drdy, E, gamma, beta, M, f_R0, delta_rho, n ):
 	return  ( Lambda*r - gamma( Omega_m0, Lambda, delta_i, beta, n, M, f_R0, delta_rho, r, a, True )*Omega_m0*(1 + delta_i)/(2*r**2) + \
-		3./2.*gamma( Omega_m0, Lambda, 0, beta, n, M, f_R0, delta_rho, r, a, False )*Omega_m0*drdy/a**3)/E(Omega_m0, Lambda, a, gamma, beta, n, M, f_R0, delta_rho, r)
+		3./2.*gamma( Omega_m0, Lambda, 0, beta, n, M, f_R0, delta_rho, a, a, True )*Omega_m0*drdy/a**3)/E(Omega_m0, Lambda, a, gamma, beta, n, M, f_R0, delta_rho, r)
 
 def Echamnorad( Omega_m0, Lambda, a, gamma, beta, n, M, f_R0, delta_rho, r ):
-	return gamma( Omega_m0, Lambda, 0, beta, n, M, f_R0, delta_rho, r, a, False )*Omega_m0/a**3 + Lambda
+	return gamma( Omega_m0, Lambda, 0, beta, n, M, f_R0, delta_rho, a, a, True )*Omega_m0/a**3 + Lambda
 
 def Phi_N( r, M, Omega_m0, delta_i ):
 	#assert r < 0, "Unphysical radius in Phi_N for %.2e" % delta_i
@@ -301,6 +301,8 @@ def phi_cham( Omega_m0, Lambda, delta_i, beta, n, M, f_R0, r, a, delta_rho):
 
 	phi = M_pl*abs(1 - f_R0)/(2*beta)*( (Omega_m0 + 4*Lambda)/(delta + 4*Lambda) )**(n + 1)
 
+	#phi = M_pl*abs(1-f_R0)/(2*beta)*( (n + 1)**2 *(Omega_m0 + 4*Lambda)/(delta + 4*Lambda) )**(1/(n**2 + n + 1))
+
 	return phi
 
 def DROR( Omega_m0, Lambda, delta_i, beta, n, M, f_R0, r, a, delta_rho, perturbation ):
@@ -317,10 +319,10 @@ def DROR( Omega_m0, Lambda, delta_i, beta, n, M, f_R0, r, a, delta_rho, perturba
 
 
 		else:
-			
+
 			phi_c = 0
-			Phi = Phi_N(r, M, Omega_m0, delta_i)
-			phi_inf = phi_cham(Omega_m0, Lambda, 0, beta, n, M, f_R0, r, a, delta_rho)
+			Phi = Phi_N(a, M, Omega_m0, 0)
+			phi_inf = phi_cham(Omega_m0, Lambda, 0, beta, n, M, f_R0, a, a, delta_rho)
 			d = abs( phi_inf - phi_c )/(6*beta*M_pl*Phi)
 			
 			#d = 1
@@ -345,19 +347,31 @@ def DRORsymm( Omega_m0, Lambda, delta_i, g, M, M_phi, r, delta_rho ):
 	mu = M_pl*H_0/M_phi
 	L = M_pl**4*H_0**2/M_phi**6
 	try:
-		if delta > M_phi**2*mu**2:
+		if rho_c0*delta > M_phi**2*mu**2:
+			#print "delta too big for screening"
 			return 0
-		elif delta < 1e-8:
+		elif rho_c0*delta < M_phi**2*mu**2:
 			Phi = Phi_N(r, M, Omega_m0, delta_i)
-			d = mu/(np.sqrt(L)*6*g*M_pl*Phi)
+			d = np.sqrt( mu**2/L - delta/(L*M_phi**2) )/(6*g*M_pl*Phi)
+			#print "screening"
+			if d < 0:
+				d = 0
+			elif d > 1:
+				d = 1
 			return d
 	except:
 		for i in range(len(r)):
-			if delta[i] > M_phi**2*mu**2:
+			if rho_c0*delta[i] > M_phi**2*mu**2:
+				#print "delta too big, loop"
 				return 0
-			elif delta[i] < 1e-8:
+			elif rho_c0*delta[i] < M_phi**2*mu**2:
 				Phi[i] = Phi_N(r[i], M, Omega_m0, delta_i)
-				d = mu/(np.sqrt(L)*6*g*M_pl*Phi[i])
+				d = np.sqrt( mu**2/L - delta/(L*M_phi**2) )/(6*g*M_pl*Phi[i])
+				#print "screening, loop"
+				if d[i] < 0:
+					d[i] = 0
+				elif d[i] > 1:
+					d[i] = 1
 				return d			
 
 
@@ -366,16 +380,30 @@ values = open("Numbers\Vals.txt", "w")
 def gammaHuSawicki1( Omega_m0, Lambda, delta_i, beta, n, M, f_R0, delta_rho, r, a, perturbation ):
 	
 	deltRoverR = DROR( Omega_m0, Lambda, delta_i, beta, n, M, f_R0, r, a, delta_rho, perturbation )
+	"""
+	if 3*deltRoverR <= 1:
+	
+		return 1 + 2*beta**2*( 3*deltRoverR )
 
-	return 1 + 2*beta**2*( 3*deltRoverR )
-
+	else:
+		return 1 + 2*beta**2
+	"""
+	Rs = 1 - deltRoverR
+	return 1 + 2*beta**2*( 1 - Rs**3)
 def gamma_symm( Omega_m0, Lambda, delta_i, g, n, M, M_phi, delta_rho, r, a, perturbation ):
 	#In comparison to chameleon, g -> beta, M_phi -> f_R0 notationally
 
 	deltaR_overR = DRORsymm( Omega_m0, Lambda, delta_i, g, M, M_phi, r, delta_rho )
+	"""
+	if 3*deltaR_overR <= 1:
 
-	return 1 + 2*g**2*( 3*deltaR_overR )
-	
+		return 1 + 2*g**2*( 3*deltaR_overR )
+
+	else:
+		return 1 + 2*g**2
+	"""
+	Rs = 1 - deltaR_overR
+	return 1 + 2*beta**2*( 1 - Rs**3)
 
 def controll( model1, model2, E1, E2, Gamma, beta, M, f_R0, n, delta_rho, delta_i ):
 
@@ -396,7 +424,7 @@ def controll( model1, model2, E1, E2, Gamma, beta, M, f_R0, n, delta_rho, delta_
 	mpl.xscale("log")
 	return
 
-def placement( filename ):
+def placement( filename, label1 ):
 
 	file = open(filename, "r")
 	d_vir = []
@@ -405,30 +433,69 @@ def placement( filename ):
 	avirata = []
 	variable = []
 	avir = []
-
+	i = 0
 	for j in file.readlines():
-		for i in range(6):
-			try:
-				value = float(j)
-			except ValueError:
-				break
-			if i == 0:
-				variable.append(value)
-			elif i == 1:
-				d_vir.append(value)
-			elif i == 2:
-				d_ta.append(value)
-			elif i == 3:
-				rvirrta.append(value)
-			elif i == 4:
-				avirata.append(value)
-			elif i == 5:
-				avir.append(value)
+		try:
+			value = float(j)
+		except ValueError:
+			break
+		if i == 0:
+			variable.append(value)
+			i += 1
+		elif i == 1:
+			d_vir.append(value)
+			i += 1
+		elif i == 2:
+			d_ta.append(value)
+			i += 1
+		elif i == 3:
+			rvirrta.append(value)
+			i += 1
+		elif i == 4:
+			avirata.append(value)
+			i += 1
+		elif i == 5:
+			avir.append(value)
+			i = 0
+
+		
 
 	file.close()
+	
+	mpl.subplot(2, 3, 1)
 	mpl.plot(variable, d_vir, linewidth = 0.75)
+	mpl.xlabel(label1)
+	mpl.ylabel(r"$\Delta_{vir}$", rotation = 0)
 	mpl.xscale("log")
+	
+	mpl.subplot(2, 3, 2)
+	mpl.plot(variable, d_ta, linewidth = 0.75)
+	mpl.xlabel(label1)
+	mpl.ylabel(r"$\Delta_{ta}$", rotation = 0)
+	mpl.xscale("log")
+
+	mpl.subplot(2, 3, 3)
+	mpl.plot(variable, rvirrta, linewidth = 0.75)
+
+	mpl.xlabel(label1)
+	mpl.ylabel(r"$\frac{\tilde{R}_{vir}}{\tilde{R}_{ta}}$", rotation = 0)
+	mpl.xscale("log")
+
+	mpl.subplot(2, 3, 4)
+	mpl.plot(variable, avirata, linewidth = 0.75)
+
+	mpl.xlabel(label1)
+	mpl.ylabel(r"$\frac{a_{vir}}{a_{ta}}$", rotation = 0)
+	mpl.xscale("log")
+
+	mpl.subplot(2, 3, 5)
+	mpl.plot(variable, avir, linewidth = 0.75)
+	mpl.xlabel(label1)
+	mpl.ylabel(r"$a_{vir}$", rotation = 0)
+	mpl.xscale("log")
+
 	mpl.show()
+
 
 	return 
 
@@ -437,12 +504,16 @@ def placement( filename ):
 tolerance = 0.001
 y0 = np.log(1e-4)
 a_i = np.exp(y0)
+N = 5000000
+y = np.linspace(y0, -1e-15, N)
+r0 = np.exp(y0)
+drdx0 = np.exp(y0)
 
 #findcoll(tolerance, LCDMacc, "LCDM", ELCDMnorad, y0)
 #findcoll(tolerance, LCDMacc, "EdS", ELCDMnorad, y0)
 
 
-M = 1e14
+M = 1e12*Msun*0.7**2
 
 beta = 1/np.sqrt(6)
 f_R0 = 1.00001
@@ -478,6 +549,7 @@ mpl.legend()
 mpl.savefig("Figures\Evolution.png", dpi = 1000)
 mpl.clf()
 
+
 mpl.plot(y, T1, "c-", linewidth = 0.75, label = r"$T_{\Lambda CDM}$")
 mpl.plot(y, -W1, "c--", linewidth = 0.75, label = r"$W_{\Lambda CDM}$")
 
@@ -510,86 +582,79 @@ mpl.clf()
 
 mpl.clf()
 
-"""
-N = 5000000
-y = np.linspace(y0, -1e-15, N)
-r0 = np.exp(y0)
-drdx0 = np.exp(y0)
 
-"""
-masses = [ 1e10, 1e12, 1e14, 1e16, 1e20]
+
+
+d_cham = 5.9083e-4
+masses = np.linspace(1e10, 1e18, 30)
 #want to loop over masses, but not within the rootfinding. I want a figure showing how Delta=rho_p/rho_b varies with the mass and curvature
 print "On loop over M"
 Mloop = open("Numbers\Massloop.txt", "w")
 for Mass in masses:
 	Mloop.write("{:1.1f} \n".format(Mass))
-	print  GtimeM_sun*Mass, H_0**2
-	rad = odeint(r, [r0, drdx0], y, args = ( chameleonacc, Omega_m0, Lambda, d_cham, Echamnorad, gammaHuSawicki1, beta, Mass, f_R0, d_rho, n) )
-	rvir, T, W = vircheck( rad, y, Omega_m0, Lambda, d_cham, chameleonacc, Echamnorad, gammaHuSawicki1, beta, Mass, f_R0, d_rho, n, Mloop )
+	rad = odeint(r, [r0, drdx0], y, args = ( chameleonacc, Omega_m0, Lambda, d_cham, Echamnorad, gammaHuSawicki1, beta, Mass*0.7**2*Msun, f_R0, d_rho, n) )
+	rvir, T, W = vircheck( rad, y, Omega_m0, Lambda, d_cham, chameleonacc, Echamnorad, gammaHuSawicki1, beta, Mass*0.7**2*Msun, f_R0, d_rho, n, Mloop )
 	mpl.plot(y, rvir, linewidth = 0.75, label = r"$M_c$ = %1.1e" % Mass)
 Mloop.close()
+
 mpl.xlabel("ln(a)")
 mpl.ylabel(r"$\tilde{R}$", rotation = 0)
 mpl.legend()
 mpl.savefig("Figures\Massloop.png")
 mpl.clf()
 
-placement("Numbers\Massloop.txt")
 
 
 
+
+d_cham = 5.9083e-4
 print "Loop over f_R0"
-M = 1e14
-f_R0_list = np.array([1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3]) + 1
+M = 1e14*0.7**2*Msun
+f_R0_list = np.linspace(0.000000001, 0.001, 30) + 1
 f_R0_loop = open("Numbers\Loop_f_R0.txt", "w")
 for f_R0_i in f_R0_list:
-	f_R0_loop.write("{:1.8f} \n".format(f_R0_i))
+	f_R0_loop.write("{:1.8f} \n".format(f_R0_i - 1))
 	rad = odeint(r, [r0, drdx0], y, args = ( chameleonacc, Omega_m0, Lambda, d_cham, Echamnorad, gammaHuSawicki1, beta, M, f_R0_i, d_rho, n) )
 	rvir, T, W = vircheck( rad, y, Omega_m0, Lambda, d_cham, chameleonacc, Echamnorad, gammaHuSawicki1, beta, M, f_R0_i, d_rho, n, f_R0_loop )
-	mpl.plot(y, rvir, linewidth = 0.75, label = r"$f_{R0}-1$ = %1.1e" % (f_R0_i-1))
+	#mpl.plot(y, rvir, linewidth = 0.75, label = r"$f_{R0}-1$ = %1.1e" % (f_R0_i-1))
 f_R0_loop.close()
+
 mpl.xlabel("ln(a)")
 mpl.ylabel(r"$\tilde{R}$", rotation = 0)
 mpl.legend()
 mpl.savefig("Figures\Loop_f_R0.pdf")
 mpl.clf()
-
-print "Loop over n"
-M = 1e14
-f_R0 = 1 + 1e-5
-n_loop = open("Numbers\Loop_n.txt", "w")
-n_list = np.linspace(1e-4, 1, 5)
-for ns in n_list:
-	n_loop.write("{:1.8f} \n".format(ns))
-	rad = odeint(r, [r0, drdx0], y, args = ( chameleonacc, Omega_m0, Lambda, d_cham, Echamnorad, gammaHuSawicki1, beta, M, f_R0, d_rho, ns) )
-	rvir, T, W = vircheck( rad, y, Omega_m0, Lambda, d_cham, chameleonacc, Echamnorad, gammaHuSawicki1, beta, M, f_R0, d_rho, ns, n_loop )
-	mpl.plot(y, rvir, linewidth = 0.75, label = r"$n$ = %1.1e" % (ns))
-n_loop.close()
-mpl.xlabel("ln(a)")
-mpl.ylabel(r"$\tilde{R}$", rotation = 0)
-mpl.legend()
-mpl.savefig("Figures\Loop_n.pdf")
-mpl.clf()
-
 """
-d_cham = 5.73246e-4
-#d_cham = 8e-4
+
+placement("Numbers\Massloop.txt", r"$h^2 M_{\odot}$")
+placement("Numbers\Loop_f_R0.txt", r"$f_{R0} - 1$")
+
+
+
+#mpl.plot(variable, d_ta, "-.", linewidth = 0.75, label = r"$\Delta_{ta}$")
+"""
+#d_cham = 5.73246e-4
+d_cham = 5.9083e-4
 
 M_S = 1e-4*M_pl
 
 file = open("Numbers\Random.txt", "w")
+rad = odeint(r, [r0, drdx0], y, args = ( LCDMacc, Omega_m0, Lambda, d_cham, ELCDMnorad, gammaHuSawicki1, 0, M, f_R0, d_rho, n) )
+rvirLCDM, T, W = vircheck( rad, y, Omega_m0, Lambda, d_cham, LCDMacc, ELCDMnorad, gammaHuSawicki1, 0, M, f_R0, d_rho, n, file )
+
 rad = odeint(r, [r0, drdx0], y, args = ( chameleonacc, Omega_m0, Lambda, d_cham, Echamnorad, gammaHuSawicki1, beta, M, f_R0, d_rho, n) )
 rvircham, T, W = vircheck( rad, y, Omega_m0, Lambda, d_cham, chameleonacc, Echamnorad, gammaHuSawicki1, beta, M, f_R0, d_rho, n, file )
 
 rad = odeint(r, [r0, drdx0], y, args = ( chameleonacc, Omega_m0, Lambda, d_cham, Echamnorad, gamma_symm, beta, M, M_S, d_rho, n) )
 rvirsymm, T, W = vircheck( rad, y, Omega_m0, Lambda, d_cham, chameleonacc, Echamnorad, gamma_symm, beta, M, M_S, d_rho, n, file )
 
-file.close
+file.close()
 a = np.exp(y)
-mpl.plot(a, rvircham, linewidth = 0.75, label = "Chameleon")
-mpl.plot(a, rvirsymm, linewidth = 0.75, label = "Symmetron")
+mpl.plot(a, rvirLCDM, "--", linewidth = 0.75, label = r"$\Lambda$ CDM")
+mpl.plot(a, rvircham, "-.", linewidth = 0.75, label = "Chameleon")
+mpl.plot(a, rvirsymm, ":", linewidth = 0.75, label = "Symmetron")
 mpl.legend()
-mpl.ylabel(r"$\tilde{R}$")
+mpl.ylabel(r"$\tilde{R}$", rotation = 0)
 mpl.xlabel("a")
 mpl.xscale("log")
 mpl.show()
@@ -611,10 +676,10 @@ mpl.subplot(2, 2, 1)
 mpl.plot(a, geff_cham, "-.", linewidth = 0.75, label = "Chameleon")
 mpl.plot(a, geff_symm, "--", linewidth = 0.75, label = "Symmetron")
 mpl.legend()
-mpl.ylabel(r"$\gamma - 1$")
+mpl.ylabel(r"$\gamma - 1$", rotation = 0)
 mpl.xscale("log")
 mpl.xlabel("a")
-mpl.yscale("log")
+
 
 
 mpl.subplot(2, 2, 2)
@@ -624,7 +689,7 @@ mpl.legend()
 mpl.ylabel(r"$\frac{\Delta R}{R}$")
 mpl.xlabel("a")
 mpl.xscale("log")
-mpl.yscale("log")
+
 
 
 Delta_cham = d_rho( Omega_m0, Lambda, d_cham, rvircham )
@@ -647,11 +712,12 @@ mpl.subplot(2, 2, 4)
 mpl.plot(a, phi_cham, "-.", linewidth = 0.75, label = "Chameleon")
 mpl.plot(a, Phi_symm, "-", linewidth = 0.75, label = "Symmetron")
 mpl.ylabel(r"$\Phi_N$")
+mpl.legend()
 mpl.xscale("log")
 mpl.yscale("log")
 mpl.xlabel("a")
 mpl.show()
-print type(Delta), type(phi), len(a), len(Delta), len(phi)
+#print type(Delta), type(phi), len(a), len(Delta), len(phi)
 
 
 print "----"
@@ -662,3 +728,4 @@ controll( LCDMacc, chameleonacc, ELCDMnorad, Echamnorad, gammaHuSawicki1, 1/np.s
 
 mpl.legend()
 mpl.show()
+"""

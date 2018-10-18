@@ -104,6 +104,10 @@ def RsoverRgeneral(r, r_iovera_i, a, beta, n, M_pl, Omega_m0, delta_i, L, rho_c)
 	return 1 - 2./(beta*Omega_m0*(1+delta_i))*(M_pl*L/(rho_c*r_iovera_i**2))*(n*M_pl*L**3/(3*beta*Omega_m0*rho_c))**(1./(n+1)) \
 	*r*(a**(3./(n+1)) - r**(3./(n+1))*(1 + delta_i)**(-1./(n+1)))
 
+
+def chamscalarRsoR(fact, beta, Omega_phi, Omega_phi, 	):
+	return abs(fact)/12
+
 def chameleon(x, y, Omega_m0, Omega_phi, delta_i, beta, r_iovera_i):
 	r = x[0]
 	drdy = x[1]
@@ -163,7 +167,7 @@ def findcoll(delta_max, delta_min, y0, model, full):
 		
 
 		if ( collmax and collmid ):
-			#check wether deltamax and deltamid gives collapse
+			#check weth410er deltamax and deltamid gives collapse
 			#sets new delta_max to delta_mid for next iteration
 			delta_max = delta_mid
 

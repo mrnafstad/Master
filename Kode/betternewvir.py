@@ -11,6 +11,7 @@ import matplotlib.pylab as mpl
 from scipy.integrate import odeint
 #import sys to take redshifts from the command line
 import sys
+import time
 
 """
 H_0 = 3.44e-35				#eV
@@ -25,7 +26,7 @@ H_0 = 9.369e-32										#eV
 G = 1.0												#1
 rho_c0 = 3.*H_0**2/(8.*np.pi*G)
 Msun = 1.989e30*5.977e-22 #2.357e14							#eV-1
-M_pl = 2.176e-8*5.977e-22 #1/np.sqrt(8*np.pi)
+M_pl = 4.341e-9*5.977e-22 #2.176e-8*5.977e-22 
 GtimeM_sun = G*Msun
 
 """
@@ -424,7 +425,7 @@ def controll( model1, model2, E1, E2, Gamma, beta, M, f_R0, n, delta_rho, delta_
 	mpl.xscale("log")
 	return
 
-def placement( filename, label1 ):
+def placement( filename, label1, seccondvar ):
 
 	file = open(filename, "r")
 	d_vir = []
@@ -462,39 +463,43 @@ def placement( filename, label1 ):
 
 	file.close()
 	
-	mpl.subplot(2, 3, 1)
-	mpl.plot(variable, d_vir, linewidth = 0.75)
+	figure(1)
+	mpl.plot(variable, d_vir, linewidth = 0.75, label = seccondvar)
+	mpl.legend()
 	mpl.xlabel(label1)
 	mpl.ylabel(r"$\Delta_{vir}$", rotation = 0)
 	mpl.xscale("log")
 	
-	mpl.subplot(2, 3, 2)
-	mpl.plot(variable, d_ta, linewidth = 0.75)
+	mpl.figure(2)
+	mpl.plot(variable, d_ta, linewidth = 0.75, label = seccondvar)
+	mpl.legend()
 	mpl.xlabel(label1)
 	mpl.ylabel(r"$\Delta_{ta}$", rotation = 0)
 	mpl.xscale("log")
 
-	mpl.subplot(2, 3, 3)
-	mpl.plot(variable, rvirrta, linewidth = 0.75)
-
+	mpl.figure(3)
+	mpl.plot(variable, rvirrta, linewidth = 0.75, label = seccondvar)
+	mpl.legend()
 	mpl.xlabel(label1)
 	mpl.ylabel(r"$\frac{\tilde{R}_{vir}}{\tilde{R}_{ta}}$", rotation = 0)
 	mpl.xscale("log")
 
-	mpl.subplot(2, 3, 4)
-	mpl.plot(variable, avirata, linewidth = 0.75)
-
+	mpl.figure(4)
+	mpl.plot(variable, avirata, linewidth = 0.75, label = seccondvar)
+	
+	mpl.legend()
 	mpl.xlabel(label1)
 	mpl.ylabel(r"$\frac{a_{vir}}{a_{ta}}$", rotation = 0)
 	mpl.xscale("log")
 
-	mpl.subplot(2, 3, 5)
-	mpl.plot(variable, avir, linewidth = 0.75)
+	mpl.figure(5)
+	mpl.plot(variable, avir, linewidth = 0.75, label = seccondvar)
+	mpl.legend()
 	mpl.xlabel(label1)
+	
 	mpl.ylabel(r"$a_{vir}$", rotation = 0)
 	mpl.xscale("log")
 
-	mpl.show()
 
 
 	return 
@@ -513,7 +518,7 @@ drdx0 = np.exp(y0)
 #findcoll(tolerance, LCDMacc, "EdS", ELCDMnorad, y0)
 
 
-M = 1e12*Msun*0.7**2
+M = 1e12*Msun/0.7
 
 beta = 1/np.sqrt(6)
 f_R0 = 1.00001
@@ -584,24 +589,71 @@ mpl.clf()
 
 
 
-
 d_cham = 5.9083e-4
-masses = np.linspace(1e10, 1e18, 30)
+masses = np.logspace(10, 18, 30)
 #want to loop over masses, but not within the rootfinding. I want a figure showing how Delta=rho_p/rho_b varies with the mass and curvature
 print "On loop over M"
-Mloop = open("Numbers\Massloop.txt", "w")
-for Mass in masses:
-	Mloop.write("{:1.1f} \n".format(Mass))
-	rad = odeint(r, [r0, drdx0], y, args = ( chameleonacc, Omega_m0, Lambda, d_cham, Echamnorad, gammaHuSawicki1, beta, Mass*0.7**2*Msun, f_R0, d_rho, n) )
-	rvir, T, W = vircheck( rad, y, Omega_m0, Lambda, d_cham, chameleonacc, Echamnorad, gammaHuSawicki1, beta, Mass*0.7**2*Msun, f_R0, d_rho, n, Mloop )
-	mpl.plot(y, rvir, linewidth = 0.75, label = r"$M_c$ = %1.1e" % Mass)
-Mloop.close()
+f_R0_forM = np.array([1e-9, 1e-7, 1e-5, 1e-3]) + 1
+t01 = time.time()
+for f in f_R0_forM:
+	Mloop = open("Numbers\Massloop.txt", "w")
+	t11 = time.time()
+	for Mass in masses:
+		t21 = time.time()
+		print "1 - f_R0 =$ %.2e" %  abs(1 - f)
+		Mloop.write("{:1.1f} \n".format(Mass))
+		rad = odeint(r, [r0, drdx0], y, args = ( chameleonacc, Omega_m0, Lambda, d_cham, Echamnorad, gammaHuSawicki1, beta, Mass*Msun/0.7, f, d_rho, n) )
+		rvir, T, W = vircheck( rad, y, Omega_m0, Lambda, d_cham, chameleonacc, Echamnorad, gammaHuSawicki1, beta, Mass*Msun/0.7, f, d_rho, n, Mloop )
+		#mpl.plot(y, rvir, linewidth = 0.75, label = r"$M_c$ = %1.1e" % Mass)
+		t22 = time.time()
+		print "Time spent on individual mass: %.5e" % (t22 - t21)
+	Mloop.close()
+	t12 = time.time()
+	print "Time spent on whole massloop: %.5e" % (t12 - t11)
+	placement("Numbers\Massloop.txt", r"$M_{\odot}h^{-1}$", r"$|1 - f_{R0}| = 10^{%.0f}$ " %  np.log10(abs(1 - f)))
+
+t02 = time.time()
+
+print "time spent on nested massloop: %.5e" % (t02 - t01)
+
+mpl.figure(1)
+mpl.axhline(y = 294.605, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
+mpl.legend()
+mpl.savefig("Figures\Massmaindvir.pdf")
+mpl.clf()
+
+mpl.figure(2)
+mpl.axhline(y = 7.09, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
+mpl.legend()
+mpl.savefig("Figures\Massmaindta.pdf")
+mpl.clf()
+
+mpl.figure(3)
+mpl.axhline(y = 0.48181, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
+mpl.legend()
+mpl.savefig("Figures\Massmainrvirrta.pdf")
+mpl.clf()
+
+mpl.figure(4)
+mpl.axhline(y = 1.66881, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
+mpl.legend()
+mpl.savefig("Figures\Massmainavirata.pdf")
+mpl.clf()
+
+mpl.figure(5)
+mpl.axhline(y = 0.916595229171737, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
+mpl.legend()
+mpl.savefig(Figures\Massmainavir.pdf)
+mpl.clf()
+
 
 mpl.xlabel("ln(a)")
 mpl.ylabel(r"$\tilde{R}$", rotation = 0)
 mpl.legend()
-mpl.savefig("Figures\Massloop.png")
-mpl.clf()
+mpl.show()
+-mpl.close("all")
+#mpl.savefig("Figures\Massloop.png")
+#mpl.clf()
 
 
 
@@ -609,36 +661,226 @@ mpl.clf()
 
 d_cham = 5.9083e-4
 print "Loop over f_R0"
-M = 1e14*0.7**2*Msun
-f_R0_list = np.linspace(0.000000001, 0.001, 30) + 1
-f_R0_loop = open("Numbers\Loop_f_R0.txt", "w")
-for f_R0_i in f_R0_list:
-	f_R0_loop.write("{:1.8f} \n".format(f_R0_i - 1))
-	rad = odeint(r, [r0, drdx0], y, args = ( chameleonacc, Omega_m0, Lambda, d_cham, Echamnorad, gammaHuSawicki1, beta, M, f_R0_i, d_rho, n) )
-	rvir, T, W = vircheck( rad, y, Omega_m0, Lambda, d_cham, chameleonacc, Echamnorad, gammaHuSawicki1, beta, M, f_R0_i, d_rho, n, f_R0_loop )
-	#mpl.plot(y, rvir, linewidth = 0.75, label = r"$f_{R0}-1$ = %1.1e" % (f_R0_i-1))
-f_R0_loop.close()
+Mforf = [1e11, 1e13, 15, 1e17]
+f_R0_list = np.logspace(-12, -3, 30) + 1
+for M in Mforf:
+	f_R0_loop = open("Numbers\Loop_f_R0.txt", "w")
+	for f_R0_i in f_R0_list:
+		print "$M = %.2e M_sun/h" % M
+		f_R0_loop.write("{:1.8f} \n".format(f_R0_i - 1))
+		rad = odeint(r, [r0, drdx0], y, args = ( chameleonacc, Omega_m0, Lambda, d_cham, Echamnorad, gammaHuSawicki1, beta, M*Msun/0.7, f_R0_i, d_rho, n) )
+		rvir, T, W = vircheck( rad, y, Omega_m0, Lambda, d_cham, chameleonacc, Echamnorad, gammaHuSawicki1, beta, M*Msun/0.7, f_R0_i, d_rho, n, f_R0_loop )
+		#mpl.plot(y, rvir, linewidth = 0.75, label = r"$f_{R0}-1$ = %1.1e" % (f_R0_i-1))
+	f_R0_loop.close()
+	placement("Numbers\Loop_f_R0.txt", r"$|f_{R0} - 1|$", r"$M = 10^{%.0f} M_{\odot} h^{-1}$" % np.log10(M))
+
+mpl.figure(1)
+mpl.axhline(y = 294.605, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
+mpl.legend()
+mpl.savefig("Figures\Fmaindvir.pdf")
+mpl.clf()
+
+mpl.figure(2)
+mpl.axhline(y = 7.09, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
+mpl.legend()
+mpl.savefig("Figures\Fmaindta.pdf")
+mpl.clf()
+
+mpl.figure(3)
+mpl.axhline(y = 0.48181, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
+mpl.legend()
+mpl.savefig("Figures\Fmainrvirrta.pdf")
+mpl.clf()
+
+mpl.figure(4)
+mpl.axhline(y = 1.66881, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
+mpl.legend()
+mpl.savefig("Figures\Fmainavirata.pdf")
+mpl.clf()
+
+mpl.figure(5)
+mpl.axhline(y = 0.916595229171737, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
+mpl.legend()
+mpl.savefig(Figures\Fmainavir.pdf)
+mpl.clf()
+
 
 mpl.xlabel("ln(a)")
 mpl.ylabel(r"$\tilde{R}$", rotation = 0)
 mpl.legend()
-mpl.savefig("Figures\Loop_f_R0.pdf")
-mpl.clf()
-"""
+mpl.show()
+mpl.close("all")
+#mpl.savefig("Figures\Loop_f_R0.pdf")
+#mpl.clf()
+
 
 placement("Numbers\Massloop.txt", r"$h^2 M_{\odot}$")
 placement("Numbers\Loop_f_R0.txt", r"$f_{R0} - 1$")
 
-
-
-#mpl.plot(variable, d_ta, "-.", linewidth = 0.75, label = r"$\Delta_{ta}$")
 """
+
+
+mpl.close("all")
 #d_cham = 5.73246e-4
 d_cham = 5.9083e-4
 
 M_S = 1e-4*M_pl
 
 file = open("Numbers\Random.txt", "w")
+linestyles = ["-.", "--", ":"]
+colors = ["grey", "black", "lightgrey"]
+
+
+masses = np.logspace(12, 16, 3)
+fs = np.logspace(-8, -4, 3) + 1
+a = np.exp(y)
+geff_cham = np.zeros(len(a))
+k = 0
+for M in masses:
+	maxes = []
+	mins = []
+	j = 0
+	for f_R0 in fs:
+		rad = odeint(r, [r0, drdx0], y, args = ( chameleonacc, Omega_m0, Lambda, d_cham, Echamnorad, gammaHuSawicki1, beta, M, f_R0, d_rho, n) )
+		rvircham, T, W = vircheck( rad, y, Omega_m0, Lambda, d_cham, chameleonacc, Echamnorad, gammaHuSawicki1, beta, M, f_R0, d_rho, n, file )
+		
+		for i in range(len(a)):
+			geff_cham[i] = gammaHuSawicki1(Omega_m0, Lambda, d_cham, beta, n, M, f_R0, d_rho, rvircham[i], a[i], True) - 1
+
+		Delta_cham = d_rho( Omega_m0, Lambda, d_cham, rvircham )
+		Phi_cham_newt = Phi_N( rvircham, M, Omega_m0, d_cham )
+		phi_c = phi_cham( Omega_m0, Lambda, d_cham, beta, n, M, f_R0, rvircham, a, d_rho)
+		if j == 0:
+			maxes.append(geff_cham)
+			maxes.append(Delta_cham)
+			maxes.append(Phi_cham_newt)
+			maxes.append(phi_c)
+
+		elif j == 2:
+			mins.append(geff_cham)
+			mins.append(Delta_cham)
+			mins.append(Phi_cham_newt)
+			mins.append(phi_c)			
+
+
+		mpl.figure(1)
+		mpl.plot(a, geff_cham, linestyles[k], linewidth = 0.75, label = r"1 - $f_{R0} = 10^{%.0f}$" % np.log10(abs(1 - f_R0)))
+
+		mpl.figure(2)
+		mpl.plot(a, Delta_cham, linestyles[k], linewidth = 0.75, label = r"1 - $f_{R0} = 10^{%.0f}$" % np.log10(abs(1 - f_R0)))
+	
+		mpl.figure(3)
+		mpl.plot(a, Phi_cham_newt, linestyles[k], linewidth = 0.75, label = r"1 - $f_{R0} = 10^{%.0f}$" % np.log10(abs(1 - f_R0)))
+
+		mpl.figure(4)
+		mpl.plot(a, phi_c, linestyles[k], linewidth = 0.75, label = r"1 - $f_{R0} = 10^{%.0f}$" % np.log10(abs(1 - f_R0)))
+		j += 1
+
+	
+
+	mpl.figure(1)
+	mpl.legend()
+	mpl.title(r"M =$ 10^{%.0f} M_{\odot}h^{-1}$" % (np.log10(M)))
+	mpl.xlabel("a")
+	mpl.ylabel(r"$\gamma - 1$", rotation = 0)
+	mpl.xscale("log")
+	mpl.savefig("Figures\GammaM" + str(np.log10(M)) + ".pdf")
+	mpl.clf()
+
+	mpl.figure(2)
+	mpl.legend()
+	mpl.title(r"M =$ 10^{%.0f} M_{\odot}h^{-1}$" % (np.log10(M)))
+	mpl.xlabel("a")
+	mpl.ylabel(r"$\Delta_{\rho}$", rotation = 0)
+	mpl.xscale("log")
+	mpl.yscale("log")
+	mpl.savefig("Figures\DeltaM" + str(np.log10(M)) + ".pdf")
+	mpl.clf()
+
+	mpl.figure(3)
+	mpl.legend()
+	mpl.title(r"M =$ 10^{%.0f} M_{\odot}h^{-1}$" % (np.log10(M)))
+	mpl.xlabel("a")
+	mpl.ylabel(r"$\Phi_N$", rotation = 0)
+	mpl.xscale("log")
+	mpl.yscale("log")
+	mpl.savefig("Figures\Phi_NM" + str(np.log10(M)) + ".pdf")
+	mpl.clf()
+
+	mpl.figure(4)
+	mpl.legend()
+	mpl.title(r"M =$ 10^{%.0f} M_{\odot}h^{-1}$" % (np.log10(M)))
+	mpl.xlabel("a")
+	mpl.ylabel(r"$\phi_{cham}$", rotation = 0)
+	mpl.xscale("log")
+	mpl.yscale("log")
+	mpl.savefig("Figures\Phi_cM" + str(np.log10(M)) + ".pdf")
+	mpl.clf()
+
+	mpl.figure(5)
+	mpl.plot(a, maxes[0], linestyles[k], color = colors[k], linewidth = 0.75, label = r"$|1-f_{R0}| = 10^{-8}$")
+	mpl.plot(a, mins[0], linestyles[k], color = colors[k], linewidth = 0.75, label = r"$|1-f_{R0}| = 10^{-4}$")
+	mpl.fill_between(a, maxes[0], mins[0], facecolor = colors[k], alpha = 0.5, label = r"$M = 10^{%.0f}$" % np.log10(M))
+
+	mpl.figure(6)
+	mpl.plot(a, maxes[1], linestyles[k], color = colors[k], linewidth = 0.75, label = r"$|1-f_{R0}| = 10^{-8}$")
+	mpl.plot(a, mins[1], linestyles[k], color = colors[k], linewidth = 0.75, label = r"$|1-f_{R0}| = 10^{-4}$")
+	mpl.fill_between(a, maxes[1], mins[1], facecolor = colors[k], alpha = 0.5, label = r"$M = 10^{%.0f}$" % np.log10(M))
+
+	mpl.figure(7)
+	mpl.plot(a, maxes[2], linestyles[k], color = colors[k], linewidth = 0.75, label = r"$|1-f_{R0}| = 10^{-8}$")
+	mpl.plot(a, mins[2], linestyles[k], color = colors[k], linewidth = 0.75, label = r"$|1-f_{R0}| = 10^{-4}$")
+	mpl.fill_between(a, maxes[2], mins[2], facecolor = colors[k], alpha = 0.5, label = r"$M = 10^{%.0f}$" % np.log10(M))
+
+	mpl.figure(8)
+	mpl.plot(a, maxes[3], linestyles[k], color = colors[k], linewidth = 0.75, label = r"$|1-f_{R0}| = 10^{-8}$")
+	mpl.plot(a, mins[3], linestyles[k], color = colors[k], linewidth = 0.75, label = r"$|1-f_{R0}| = 10^{-4}$")
+	mpl.fill_between(a, maxes[3], mins[3], facecolor = colors[k], alpha = 0.5, label = r"$M = 10^{%.0f}$" % np.log10(M))
+
+	k += 1
+
+	#mpl.show()
+
+mpl.figure(5)
+mpl.legend()
+mpl.xlabel("a")
+mpl.ylabel(r"$\gamma - 1$", rotation = 0)
+mpl.xscale("log")
+mpl.savefig("Figures\GammaM.pdf")
+mpl.clf()
+
+mpl.figure(6)
+mpl.legend()
+mpl.xlabel("a")
+mpl.ylabel(r"$\Delta_{\rho}$", rotation = 0)
+mpl.xscale("log")
+mpl.yscale("log")
+mpl.savefig("Figures\DeltaM.pdf")
+mpl.clf()
+
+mpl.figure(7)
+mpl.legend()
+mpl.xlabel("a")
+mpl.ylabel(r"$\Phi_N$", rotation = 0)
+mpl.xscale("log")
+mpl.yscale("log")
+mpl.savefig("Figures\Phi_NM.pdf")
+mpl.clf()
+
+mpl.figure(8)
+mpl.legend()
+mpl.xlabel("a")
+mpl.ylabel(r"$\phi_{c}$", rotation = 0)
+mpl.xscale("log")
+mpl.yscale("log")
+mpl.savefig("Figures\Phi_cM.pdf")
+mpl.clf()
+
+mpl.close("all")
+
+file.close()
+"""
+
 rad = odeint(r, [r0, drdx0], y, args = ( LCDMacc, Omega_m0, Lambda, d_cham, ELCDMnorad, gammaHuSawicki1, 0, M, f_R0, d_rho, n) )
 rvirLCDM, T, W = vircheck( rad, y, Omega_m0, Lambda, d_cham, LCDMacc, ELCDMnorad, gammaHuSawicki1, 0, M, f_R0, d_rho, n, file )
 

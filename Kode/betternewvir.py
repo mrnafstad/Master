@@ -20,7 +20,7 @@ M_pl = 2.44e27				#eV
 rho_c0 = 3*H_0**2/(8*np.pi*G)
 Msun = 2e30*5.61e26
 GtimeM_sun = G*Msun
-"""
+
 #in natural (Planck) units:
 H_0 = 9.369e-32										#eV 
 G = 1.0												#1
@@ -32,13 +32,13 @@ GtimeM_sun = G*Msun
 """
 hbar = 6.58e-16
 c = 3e8
-G = 6.71e-39										#eV^-2, revisit the value of G in NU
-Msun = 1.99e30*5.61e26								#eV, should be 1.12e66
-M_pl = 2.44e18
-H_0 = 70/3.09e19*1.519e15							#eV
+G = 6.71e-39										#GeV^-2, revisit the value of G in NU
+Msun = 1.99e30*5.61e26								#GeV, should be 1.12e66
+M_pl = 2.44e18										#GeV
+H_0 = 70/3.09e19*1.519e24							#GeV
 rho_c0 = 3.*H_0**2/(8.*np.pi*G)
 GtimeM_sun = G*Msun
-"""
+
 print H_0, G, rho_c0, Msun, M_pl
 
 def vircheck(R, y, Omega_m0, Lambda, delta_i, acceleration, E, gamma, beta, M, f_R0, delta_rho, n, file):
@@ -66,7 +66,7 @@ def vircheck(R, y, Omega_m0, Lambda, delta_i, acceleration, E, gamma, beta, M, f
 			i = k = j
 			vir = True
 
-		elif ( 2*T[j] < W[j] and not vir ):
+		elif ( 2*T[j] < abs(W[j]) ):
 
 			i = k = j
 			vir = True
@@ -283,21 +283,21 @@ def findcoll(tolerance, acceleration, model, E, gamma, beta, M, f_R0, delta_rho,
 	rvir, T, W = vircheck( R, y, Omega_m0, Lambda, delta_max, acceleration, E, gamma, beta, M, f_R0, delta_rho, n, file )
 	if plot:
 		if model == "Chameleon":
-			mpl.plot(a, rvir, "-.", linewidth = 0.75, label = r"Chameleon, $M = 10^{%.0f} M_{\odot} h^{-1}$, $f_{R0} - 1$ = 10^{%.0f}, $\delta_i$ = %1.5e" % (np.log10(M/Msun*0.7), np.log10(abs(f_R0 - 1)), delta_max))
+			mpl.plot(a, rvir, "-.", linewidth = 0.75, label = "Chameleon, $M = 10^{%.0f} M_{\odot} h^{-1}$, \n$f_{R0} - 1 = 10^{%.0f}$, $\delta_i$ = %1.5e" % (np.log10(M/Msun*0.7), np.log10(abs(f_R0 - 1)), delta_max))
 			#mpl.plot(y, R[:,0], "-.", linewidth = 0.75, label = "Chameleon no vir")
 			#Rmin = odeint(r, [r0, drdx0], y, args = ( acceleration, Omega_m0, Lambda, delta_min, E, gamma, beta, M, f_R0, delta_rho, n ) )
 			#rvirmin, Tmin, Wmin = vircheck( Rmin, y, Omega_m0, Lambda, delta_min, acceleration, E, gamma, beta, M, f_R0, delta_rho, n, file )
 			#mpl.plot(y, rvirmin, "-.", linewidth = 0.75, label = r"Chameleon, M = %1.0e, $f_{R0} - 1$ = %1.0e, $\delta_i$ = %1.5e" % (M, f_R0 - 1, delta_min))
 		if model == "Symmetron":
-			mpl.plot(a, rvir, "-", linewidth = 0.75, label = r"Symmetron, $M = 10^{%.0f} M_{\odot} h^{-1}$, $z_{ssb}$ = %.2e, L = %.2e $\delta_i$ = %1.5e" % (np.log10(M/Msun*0.7), f_R0, n/3.09e22*1.97e-7, delta_max))
+			mpl.plot(a, rvir, "-", linewidth = 0.75, label = "Symmetron, $M = 10^{%.0f} M_{\odot} h^{-1}$, \n$z_{ssb} = %.1f, L = %.0f Mpc h^{-1}, \delta_i$ = %1.5e" % (np.log10(M/Msun*0.7), f_R0, n/3.09e22*1.97e-7*0.7, delta_max))
 		elif model == "LCDM":
 			mpl.plot(a, rvir, "--", linewidth = 0.75, label = r"$\Lambda$CDM, $\delta_i$ = %1.5e" % delta_max)
 		elif model == "EdS":
-			mpl.plot(a, rvir, ":", linewidth = 0.75, label = model)
+			mpl.plot(a, rvir, ":", linewidth = 0.75, label = r"EdS$\delta_i$ = %1.5e" % delta_max)
 	file.write("{:1.7f} \n".format(delta_max))
 	return T, W, y, delta_max
 
-	#return rvir
+	#return rvir#, delta_max
 
 def gammaBack(Omega_m0, Lambda, delta_i, beta, n, M, f_R0, delta_rho, r, a, perturbation):
 	return 1 
@@ -376,6 +376,19 @@ def DROR( Omega_m0, Lambda, delta_i, beta, n, M, f_R0, r, a, delta_rho, perturba
 		
 		return d
 
+def phi_symm(rho, rho_ssb, L, M, beta):
+	try:			
+		for i in range(len(rho)):
+			if rho[i] > rho_ssb:
+				return 0
+			else:
+				return np.sqrt(np.sqrt(2)*L*beta/M_pl)*np.sqrt(rho_ssb - rho[i])
+	except:
+		if rho > rho_ssb:
+			return 0
+		else:
+			return np.sqrt(np.sqrt(2)*L*beta/M_pl)*np.sqrt(rho_ssb - rho)
+
 def DRORsymm( Omega_m0, Lambda, delta_i, beta, L, M, z_ssb, r, delta_rho ):
 
 	if beta**2 <= 0:
@@ -388,37 +401,38 @@ def DRORsymm( Omega_m0, Lambda, delta_i, beta, L, M, z_ssb, r, delta_rho ):
 		
 		M_phisquare = 2*Omega_m0*rho_c0*L**2/a_ssb**3
 		l = M_pl**2 * a_ssb**3/(4*Omega_m0*rho_c0*beta**2*L**2)
+
+		rho_ssb = rho_c0*Omega_m0/a_ssb**3
+		rho_p = rho_c0*delta
+		rho_b = rho_c0*delta_rho(Omega_m0, Lambda, 0, a)
+
+		Phi = Phi_N(r, M, Omega_m0, delta_i)
+
 		try:			
 			for i in range(len(r)):
-				if rho_c0*delta[i] > M_phisquare*mu**2:
-					#print "delta too big, loop"
-					return 0
-				elif rho_c0*delta[i] < M_phisquare*mu**2:
-					Phi[i] = Phi_N(r[i], M, Omega_m0, delta_i)
-					d = np.sqrt( mu**2/l - delta/(l*M_phisquare) )/(6*beta*M_pl*Phi[i])
-					#print "screening, loop"
-					if d[i] < 0:
-						d[i] = 0
-					elif d[i] > 1:
-						d[i] = 1
-					return d	
+				phi_inf = phi_symm(rho_b[i], rho_ssb, L, M, beta)
+				phi_c = phi_symm(rho_p[i], rho_ssb, L, M, beta)
+				d = abs(phi_c - phi_inf)/(6*beta*Phi[i]*M_pl)
+
+				if d[i] < 0:
+					d[i] = 0
+				elif d[i] > 1:
+					d[i] = 1
+				return d
 			
 		except:
-			if rho_c0*delta > M_phisquare*mu**2:
-					#print "delta too big for screening"
-					return 0
-			elif rho_c0*delta < M_phisquare*mu**2:
-				Phi = Phi_N(r, M, Omega_m0, delta_i)
-				#print Phi, mu, delta, l, M_phisquare
-				d = np.sqrt( mu**2/l - delta/(l*M_phisquare) )/(6*beta*M_pl*Phi)
-				#print "screening"
-				if (d < 0 or np.isnan(d)):
-					d = 0
-				elif d > 1:
-					d = 1
+			phi_inf = phi_symm(rho_b, rho_ssb, L, M, beta)
+			phi_c = phi_symm(rho_p, rho_ssb, L, M, beta)
+			d = abs(phi_c - phi_inf)/(6*beta*Phi*M_pl)
 
-				#print d
-				return d
+			if d < 0:
+				d = 0
+			elif d > 1:
+				d = 1
+			return d
+
+			#print d
+			return d
 
 
 first = True
@@ -602,6 +616,8 @@ y = np.linspace(y0, -1e-15, N)
 r0 = np.exp(y0)
 drdx0 = np.exp(y0)
 
+a = np.exp(y)
+
 #findcoll(tolerance, LCDMacc, "LCDM", ELCDMnorad, y0)
 #findcoll(tolerance, LCDMacc, "EdS", ELCDMnorad, y0)
 
@@ -613,21 +629,22 @@ f_R0 = 1.00001
 n = 0.02
 Omega_m0 = 0.25
 Lambda = 0.75
-
+"""
 beta = 1
 z_ssb = 2
 L = 1
 filesymm = open("Numbers\Symmetronacc.txt", "w")
 Tsymm, Wsymm, y, d_symm = findcoll(tolerance, chameleonacc, "Symmetron", Echamnorad, gamma_symm, beta, M, z_ssb, d_rho, L*3.09e22/1.97e-7/0.7, y0, True, filesymm)
-
+"""
 
 fileLCDM = open("Numbers\LCDMviracc.txt", "w")
 
 fileEdS = open("Numbers\EdSvirracc.txt", "w")
+"""
 filecham = open("Numbers\Chameleon10.txt", "w")
 print "Working on chameleon"
 Tcham, Wcham, y, d_cham = findcoll(tolerance, chameleonacc, "Chameleon", Echamnorad, gammaHuSawicki1, 1/np.sqrt(6), M, f_R0, d_rho, 1.0, y0, True, filecham)
-a = np.exp(y)
+"""
 
 
 
@@ -635,33 +652,33 @@ print "Working on LCDM"
 T1, W1, y, d_LCDM = findcoll(tolerance, LCDMacc, "LCDM", ELCDMnorad, 0, 0, 0, 0, 0, 0, y0, True, fileLCDM)
 print "Working on EdS"
 T2, W2, y, d_EdS = findcoll(tolerance, LCDMacc, "EdS", ELCDMnorad, 0, 0, 0, 0, 0, 0, y0, True, fileEdS)
-
+"""
 filesymm.close()
-
+filecham.close()
+"""
 fileLCDM.close()
-
 fileEdS.close()
 
-filecham.close()
 
 mpl.xlabel("a")
 mpl.ylabel(r"$\tilde{R}$", rotation = 0)
 mpl.legend()
-mpl.savefig("Figures\Evolution_all.pdf")
+mpl.savefig("Figures\Evolution_all.pdf")#, addition_artists = mpl.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.), bbox_inches = "tight")
 mpl.clf()
 
-"""
-mpl.plot(y, T1, "c-", linewidth = 0.75, label = r"$T_{\Lambda CDM}$")
-mpl.plot(y, -W1, "c--", linewidth = 0.75, label = r"$W_{\Lambda CDM}$")
 
-mpl.plot(y, T2, "r:", linewidth = 0.75, label = r"$T_{EdS}$")
-mpl.plot(y, -W2, "r-.", linewidth = 0.75, label = r"$W_{EdS}$")
+mpl.plot(a, T1, "c-", linewidth = 0.75, label = r"$T_{\Lambda CDM}$")
+mpl.plot(a, -W1, "c--", linewidth = 0.75, label = r"$W_{\Lambda CDM}$")
 
-mpl.plot(y, Tcham, "b-", linewidth = 0.75, label = r"$T_{c10}$")
-mpl.plot(y, Wcham, "b--", linewidth = 0.75, label = r"$W_{c10}$")
+mpl.plot(a, T2, "r:", linewidth = 0.75, label = r"$T_{EdS}$")
+mpl.plot(a, -W2, "r-.", linewidth = 0.75, label = r"$W_{EdS}$")
+
+#mpl.plot(y, Tcham, "b-", linewidth = 0.75, label = r"$T_{c10}$")
+#mpl.plot(y, Wcham, "b--", linewidth = 0.75, label = r"$W_{c10}$")
 
 mpl.yscale("log")
-mpl.xlabel("ln(a)")
+mpl.xscale("log")
+mpl.xlabel("a")
 mpl.ylabel("T / W", rotation = 0)
 mpl.legend()
 mpl.savefig("Figures\Energies.pdf")
@@ -669,13 +686,14 @@ mpl.clf()
 
 relLCDM = -W1/T1
 relEdS = -W2/T2
-relCham = - Wcham/Tcham
+#relCham = - Wcham/Tcham
 
-mpl.plot(y, relLCDM, "c-", linewidth = 0.75, label = r"$\frac{W_{\Lambda CDM}}{T_{\Lambda CDM}}$")
-mpl.plot(y, relEdS, "r:", linewidth = 0.75, label = r"$\frac{W_{EdS}}{T_{EdS}}$")
-mpl.plot(y, relCham, "b-.", linewidth = 0.75, label = r"$\frac{W_{c10}}{T_{c10}}$")
+mpl.plot(a, relLCDM, "c-", linewidth = 0.75, label = r"$\frac{W_{\Lambda CDM}}{T_{\Lambda CDM}}$")
+mpl.plot(a, relEdS, "r:", linewidth = 0.75, label = r"$\frac{W_{EdS}}{T_{EdS}}$")
+#mpl.plot(y, relCham, "b-.", linewidth = 0.75, label = r"$\frac{W_{c10}}{T_{c10}}$")
 mpl.yscale("log")
-mpl.xlabel("ln(a)")
+mpl.xscale("log")
+mpl.xlabel("a")
 mpl.ylabel(r"$-\frac{W}{T}$", rotation = 0)
 mpl.legend()
 mpl.savefig("Figures\RelativeEnergies.pdf")
@@ -684,7 +702,7 @@ mpl.clf()
 mpl.clf()
 
 
-
+"""
 d_cham = 5.9083e-4
 masses = np.logspace(10, 18, 30)
 #want to loop over masses, but not within the rootfinding. I want a figure showing how Delta=rho_p/rho_b varies with the mass and curvature
@@ -855,6 +873,203 @@ mpl.close("all")
 #mpl.clf()
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+masses = np.logspace(10, 18, 30)
+#want to loop over masses, but not within the rootfinding. I want a figure showing how Delta=rho_p/rho_b varies with the mass and curvature
+print "On loop over M"
+z_ssbs = np.linspace(0.5, 4, 4)
+t01 = time.time()
+for z_ssb in z_ssbs:
+	t11 = time.time()
+	filename = "Numbers\SymmetronMassloopf_R0%.1f.txt" % z_ssb
+	
+
+	Mloop = open(filename, "w")
+	
+	for Mass in masses:
+		t21 = time.time()
+		Mloop.write("{:1.1f} \n".format(Mass))
+		rvirsymm = findcoll(tolerance, chameleonacc, "Symmetron", Echamnorad, gamma_symm, 1, Mass*Msun/0.7, z_ssb, d_rho, 3.09e22/1.97e-7/0.7, y0, False, Mloop)
+		#rad = odeint(r, [r0, drdx0], y, args = ( chameleonacc, Omega_m0, Lambda, d_cham, Echamnorad, gammaHuSawicki1, beta, Mass*Msun/0.7, f, d_rho, n) )
+		#rvir, T, W = vircheck( rad, y, Omega_m0, Lambda, d_cham, chameleonacc, Echamnorad, gammaHuSawicki1, beta, Mass*Msun/0.7, f, d_rho, n, Mloop )
+		#mpl.plot(y, rvir, linewidth = 0.75, label = r"$M_c$ = %1.1e" % Mass)
+		t22 = time.time()
+		print "Time spent on individual mass: %.5e" % (t22 - t21), z_ssb, M
+	Mloop.close()
+	
+	t12 = time.time()
+	
+	print "Time spent on whole massloop: %.5e" % (t12 - t11)
+	placement(filename, r"$M_{\odot}h^{-1}$", r"$z_ssb = %.1f$ " %  z_ssb, True)
+
+t02 = time.time()
+
+print "time spent on nested massloop: %.5e" % (t02 - t01)
+
+mpl.figure(1)
+mpl.axhline(y = 294.605, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
+mpl.legend()
+mpl.title("Symmetron")
+mpl.savefig("Figures\SymmetronMassmaindvir.pdf")
+mpl.clf()
+
+mpl.figure(2)
+mpl.title("Symmetron")
+mpl.axhline(y = 7.09, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
+mpl.legend()
+mpl.savefig("Figures\SymmetronMassmaindta.pdf")
+mpl.clf()
+
+mpl.figure(3)
+mpl.title("Symmetron")
+mpl.axhline(y = 0.48181, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
+mpl.legend()
+mpl.savefig("Figures\SymmetronMassmainrvirrta.pdf")
+mpl.clf()
+
+mpl.figure(4)
+mpl.title("Symmetron")
+mpl.axhline(y = 1.66881, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
+mpl.legend()
+mpl.savefig("Figures\SymmetronMassmainavirata.pdf")
+mpl.clf()
+
+mpl.figure(5)
+mpl.axhline(y = 0.916595229171737, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
+mpl.title("Symmetron")
+mpl.legend()
+mpl.savefig("Figures\SymmetronMassmainavir.pdf")
+mpl.clf()
+
+mpl.figure(6)
+mpl.axhline(y = 382.562, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
+mpl.title("Symmetron")
+mpl.legend()
+mpl.savefig("Figures\SymmetronMassmaindelta_c.pdf")
+mpl.clf()
+
+mpl.figure(7)
+mpl.axhline(y = 1, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
+mpl.legend()
+mpl.savefig("Figures\SymmetronMassmaina_c.pdf")
+mpl.clf()
+
+mpl.figure(8)
+mpl.axhline(y = 0.00059037, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
+mpl.title("Symmetron")
+mpl.legend()
+mpl.savefig("Figures\SymmetronMassmaindelta_i.pdf")
+mpl.clf()
+
+Mforf = [1e12, 1e13, 1e15, 1e17]
+z_ssb_list = np.linspace(0.5, 4, 30)
+for M in Mforf:
+	filename = "Numbers\SymmetronLoop_f_R0M" + str(np.log10(M)) + "rootfinding.txt"
+	f_R0_loop = open(filename, "w")
+	for z_ssb in z_ssb_list:
+		print M, z_ssb
+		f_R0_loop.write("{:1.8f} \n".format(f_R0_i - 1))
+		rvirsymm = findcoll(tolerance, chameleonacc, "Symmetron", Echamnorad, gamma_symm, 1, M*Msun/0.7, z_ssb, d_rho, 3.09e22/1.97e-7/0.7, y0, False, f_R0_loop)
+		#rad = odeint(r, [r0, drdx0], y, args = ( chameleonacc, Omega_m0, Lambda, d_cham, Echamnorad, gammaHuSawicki1, beta, M*Msun/0.7, f_R0_i, d_rho, n) )
+		#rvir, T, W = vircheck( rad, y, Omega_m0, Lambda, d_cham, chameleonacc, Echamnorad, gammaHuSawicki1, beta, M*Msun/0.7, f_R0_i, d_rho, n, f_R0_loop )
+		#mpl.plot(y, rvir, linewidth = 0.75, label = r"$f_{R0}-1$ = %1.1e" % (f_R0_i-1))
+	f_R0_loop.close()
+	
+	placement(filename, r"$z_ssb$", r"$M = 10^{%.0f} M_{\odot} h^{-1}$" % np.log10(M), True)
+
+mpl.figure(1)
+mpl.axhline(y = 294.605, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
+mpl.legend()
+mpl.title("Symmetron")
+mpl.savefig("Figures\SymmetronFmaindvir.pdf")
+mpl.clf()
+
+mpl.figure(2)
+mpl.axhline(y = 7.09, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
+mpl.legend()
+mpl.title("Symmetron")
+mpl.savefig("Figures\SymmetronFmaindta.pdf")
+mpl.clf()
+
+mpl.figure(3)
+mpl.axhline(y = 0.48181, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
+mpl.legend()
+mpl.title("Symmetron")
+mpl.savefig("Figures\SymmetronFmainrvirrta.pdf")
+mpl.clf()
+
+mpl.figure(4)
+mpl.axhline(y = 1.66881, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
+mpl.legend()
+mpl.title("Symmetron")
+mpl.savefig("Figures\SymmetronFmainavirata.pdf")
+mpl.clf()
+
+mpl.figure(5)
+mpl.axhline(y = 0.916595229171737, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
+mpl.legend()
+mpl.title("Symmetron")
+mpl.savefig("Figures\SymmetronFmainavir.pdf")
+mpl.clf()
+
+mpl.figure(6)
+mpl.axhline(y = 382.562, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
+mpl.legend()
+mpl.title("Symmetron")
+mpl.savefig("Figures\SymmetronFmaindelta_c.pdf")
+mpl.clf()
+
+mpl.figure(7)
+mpl.axhline(y = 1, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
+mpl.legend()
+mpl.title("Symmetron")
+mpl.savefig("Figures\SymmetronFmainac.pdf")
+mpl.clf()
+
+mpl.figure(8)
+mpl.axhline(y = 0.00059037, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
+mpl.legend()
+mpl.title("Symmetron")
+mpl.savefig("Figures\SymmetronFmaindelta_i.pdf")
+mpl.clf()
+
+
+
+
+
+
+
+mpl.close("all")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #placement("Numbers\Massloop.txt", r"$h^2 M_{\odot}$")
 #placement("Numbers\Loop_f_R0.txt", r"$f_{R0} - 1$")
 
@@ -875,21 +1090,23 @@ colors = ["grey", "black", "lightgrey"]
 masses = np.logspace(12, 16, 3)
 fs = np.logspace(-8, -4, 3) + 1
 a = np.exp(y)
-rlcdm = findcoll(tolerance, chameleonacc, "Chameleon", Echamnorad, gammaHuSawicki1, 0, 0, 0, d_rho, 1.0, y0, False, file)
+#rlcdm = findcoll(tolerance, chameleonacc, "Chameleon", Echamnorad, gammaHuSawicki1, 0, 0, 0, d_rho, 1.0, y0, False, file)
 mpl.figure(1)
-mpl.plot(a, rlcdm, "c-", label = r"$\Lambda$CDM")
+#mpl.plot(a, rlcdm, "c-", label = r"$\Lambda$CDM")
 beta = 1
 z_ssb = 2
 L = 1
-rsymm = findcoll(tolerance, chameleonacc, "Chameleon", Echamnorad, gamma_symm, beta, z_ssb, masses[1]*Msun/0.7, d_rho, L*3.09e22/1.97e-7/0.7, y0, False, file)
+for Mass in masses:
+		rsymm = findcoll(tolerance, chameleonacc, "Chameleon", Echamnorad, gamma_symm, beta, Mass*Msun/0.7, z_ssb, d_rho, L, y0, False, file)
 
 #Need to implement a whole new variable to everything!
 
-mpl.plot(a, rsymm, "r-.", linewidth = 0.75, label = r"$z_{ssb} = 0.5, \beta = 0.5, L = 1 Mpc h^{-1} $")
+		mpl.plot(a, rsymm, "r-.", linewidth = 0.75, label = r"$M = 10^{%.0f} M_{\odot} h^{-1}$" % Mass)
 
 for i in range(len(masses)):
 	rvircham = findcoll(tolerance, chameleonacc, "Chameleon", Echamnorad, gammaHuSawicki1, 1/np.sqrt(6), masses[2-i]*Msun/0.7, fs[i], d_rho, 1.0, y0, False, file)
 	mpl.plot(a, rvircham, linestyle = linestyles[i], label = r"$|f_{R0} - 1| = 10^{%.0f}, M = 10^{%.0f} M_{\odot} h^{-1}$" %(np.log10(abs(fs[i] - 1)), np.log10(masses[i])))
+
 mpl.legend()
 mpl.xlabel("a")
 mpl.ylabel(r"$\tilde{R}$", rotation = 0)
@@ -1070,6 +1287,21 @@ mpl.show()
 
 
 
+mpl.close("all")
+
+file = open("Numbers\Random.txt", "w")
+
+beta = 0.5
+z_ssb = 3
+L = 1
+rvirsymm, dsymm = findcoll(tolerance, chameleonacc, "Symmetron", Echamnorad, gamma_symm, beta, M, z_ssb, d_rho, L*3.09e22/1.97e-7/0.7, y0, False, file)
+geff_symm = np.zeros(len(a))
+for i in range(len(a)):
+	geff_symm[i] = gamma_symm(Omega_m0, Lambda, dsymm, beta, L*3.09e22/1.97e-7/0.7, M, z_ssb, d_rho, rvirsymm[i], a[i], True) - 1
+mpl.plot(a, geff_symm, "-.", label = "\gamma - 1")
+mpl.legend()
+mpl.show()
+file.close()
 
 geff_cham = np.zeros(len(a))
 DRoR_cham = np.zeros(len(a))

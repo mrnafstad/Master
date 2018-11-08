@@ -20,7 +20,7 @@ M_pl = 2.44e27				#eV
 rho_c0 = 3*H_0**2/(8*np.pi*G)
 Msun = 2e30*5.61e26
 GtimeM_sun = G*Msun
-
+"""
 #in natural (Planck) units:
 H_0 = 9.369e-32										#eV 
 G = 1.0												#1
@@ -38,7 +38,7 @@ M_pl = 2.44e18										#GeV
 H_0 = 70/3.09e19*1.519e24							#GeV
 rho_c0 = 3.*H_0**2/(8.*np.pi*G)
 GtimeM_sun = G*Msun
-
+"""
 print H_0, G, rho_c0, Msun, M_pl
 
 def vircheck(R, y, Omega_m0, Lambda, delta_i, acceleration, E, gamma, beta, M, f_R0, delta_rho, n, file):
@@ -295,9 +295,9 @@ def findcoll(tolerance, acceleration, model, E, gamma, beta, M, f_R0, delta_rho,
 		elif model == "EdS":
 			mpl.plot(a, rvir, ":", linewidth = 0.75, label = r"EdS$\delta_i$ = %1.5e" % delta_max)
 	file.write("{:1.7f} \n".format(delta_max))
-	return T, W, y, delta_max
+	#return T, W, y, delta_max
 
-	#return rvir#, delta_max
+	return rvir, delta_max
 
 def gammaBack(Omega_m0, Lambda, delta_i, beta, n, M, f_R0, delta_rho, r, a, perturbation):
 	return 1 
@@ -377,6 +377,7 @@ def DROR( Omega_m0, Lambda, delta_i, beta, n, M, f_R0, r, a, delta_rho, perturba
 		return d
 
 def phi_symm(rho, rho_ssb, L, M, beta):
+	"""
 	try:			
 		for i in range(len(rho)):
 			if rho[i] > rho_ssb:
@@ -384,55 +385,86 @@ def phi_symm(rho, rho_ssb, L, M, beta):
 			else:
 				return np.sqrt(np.sqrt(2)*L*beta/M_pl)*np.sqrt(rho_ssb - rho[i])
 	except:
-		if rho > rho_ssb:
-			return 0
-		else:
-			return np.sqrt(np.sqrt(2)*L*beta/M_pl)*np.sqrt(rho_ssb - rho)
+	"""
+	if rho > rho_ssb:
+		return 0
+	else:
+		return np.sqrt(np.sqrt(2)*L*beta/M_pl)*np.sqrt(rho_ssb - rho)
 
-def DRORsymm( Omega_m0, Lambda, delta_i, beta, L, M, z_ssb, r, delta_rho ):
+def DRORsymm( Omega_m0, Lambda, delta_i, beta, L, M, z_ssb, r, a, delta_rho ):
 
 	if beta**2 <= 0:
 		return 0
 
 	else:
-		delta = delta_rho(Omega_m0, Lambda, delta_i, r)
+		
 		mu = 1/(np.sqrt(2)*L)
 		a_ssb = 1./float(1. + z_ssb)
 		
 		M_phisquare = 2*Omega_m0*rho_c0*L**2/a_ssb**3
 		l = M_pl**2 * a_ssb**3/(4*Omega_m0*rho_c0*beta**2*L**2)
-
+		
+		delta = delta_rho(Omega_m0, Lambda, delta_i, r)
 		rho_ssb = rho_c0*Omega_m0/a_ssb**3
 		rho_p = rho_c0*delta
-		rho_b = rho_c0*delta_rho(Omega_m0, Lambda, 0, a)
 
 		Phi = Phi_N(r, M, Omega_m0, delta_i)
-
-		try:			
+		try:
+			d = np.zeros(len(phi))
+		except:
+			d = 0	
+		try:
+						
+			
 			for i in range(len(r)):
-				phi_inf = phi_symm(rho_b[i], rho_ssb, L, M, beta)
-				phi_c = phi_symm(rho_p[i], rho_ssb, L, M, beta)
-				d = abs(phi_c - phi_inf)/(6*beta*Phi[i]*M_pl)
+				if rho_p[i] < rho_ssb:
+					phi_inf = np.sqrt(np.sqrt(2)*L*beta/M_pl)*np.sqrt(rho_ssb - rho_p[i])
+				else:
+					phi_inf = 0
+				#phi_c = phi_symm(rho_p, rho_ssb, L, M, beta)
+				d[i] = abs(phi_inf)/(6*beta*Phi*M_pl)
 
 				if d[i] < 0:
 					d[i] = 0
 				elif d[i] > 1:
 					d[i] = 1
-				return d
-			
-		except:
-			phi_inf = phi_symm(rho_b, rho_ssb, L, M, beta)
-			phi_c = phi_symm(rho_p, rho_ssb, L, M, beta)
-			d = abs(phi_c - phi_inf)/(6*beta*Phi*M_pl)
+		
+		
+		except ZeroDivisionError:
+			d = 1
+		except TypeError:
+			try:
+				if rho_p < rho_ssb:
+					phi_inf = np.sqrt(np.sqrt(2)*L*beta/M_pl)*np.sqrt(rho_ssb - rho_p)
+				else:
+					phi_inf = 0
 
-			if d < 0:
-				d = 0
-			elif d > 1:
-				d = 1
-			return d
+				#phi_c = phi_symm(rho_p, rho_ssb, L, M, beta)
+				d = abs(phi_inf)/(6*beta*Phi*M_pl)
+
+				if d < 0:
+					d = 0
+				elif d > 1:
+					d = 1
+			except ValueError:
+				d = np.zeros(len(rho_p))
+				for i in range(len(rho_p)):
+					if rho_p[i] < rho_ssb:
+						phi_inf = np.sqrt(np.sqrt(2)*L*beta/M_pl)*np.sqrt(rho_ssb - rho_p[i])
+					else:
+						phi_inf = 0
+					#phi_c = phi_symm(rho_p, rho_ssb, L, M, beta)
+					d[i] = abs(phi_inf)/(6*beta*Phi[i]*M_pl)
+
+					if d[i] < 0:
+						d[i] = 0
+					elif d[i] > 1:
+						d[i] = 1
+		
+		return d
 
 			#print d
-			return d
+		
 
 
 first = True
@@ -455,7 +487,7 @@ def gammaHuSawicki1( Omega_m0, Lambda, delta_i, beta, n, M, f_R0, delta_rho, r, 
 def gamma_symm( Omega_m0, Lambda, delta_i, beta, L, M, z_ssb, delta_rho, r, a, perturbation ):
 	#In comparison to chameleon, g -> beta, M_phi -> f_R0 notationally
 
-	deltaR_overR = DRORsymm( Omega_m0, Lambda, delta_i, beta, L, M, z_ssb, r, delta_rho )
+	deltaR_overR = DRORsymm( Omega_m0, Lambda, delta_i, beta, L, M, z_ssb, r, a, delta_rho )
 	"""
 	if 3*deltaR_overR <= 1:
 
@@ -616,7 +648,7 @@ y = np.linspace(y0, -1e-15, N)
 r0 = np.exp(y0)
 drdx0 = np.exp(y0)
 
-a = np.exp(y)
+
 
 #findcoll(tolerance, LCDMacc, "LCDM", ELCDMnorad, y0)
 #findcoll(tolerance, LCDMacc, "EdS", ELCDMnorad, y0)
@@ -630,21 +662,21 @@ n = 0.02
 Omega_m0 = 0.25
 Lambda = 0.75
 """
-beta = 1
-z_ssb = 2
-L = 1
+beta = .5
+z_ssb = 1.
+L = 1.
 filesymm = open("Numbers\Symmetronacc.txt", "w")
 Tsymm, Wsymm, y, d_symm = findcoll(tolerance, chameleonacc, "Symmetron", Echamnorad, gamma_symm, beta, M, z_ssb, d_rho, L*3.09e22/1.97e-7/0.7, y0, True, filesymm)
-"""
+
 
 fileLCDM = open("Numbers\LCDMviracc.txt", "w")
 
 fileEdS = open("Numbers\EdSvirracc.txt", "w")
-"""
+
 filecham = open("Numbers\Chameleon10.txt", "w")
 print "Working on chameleon"
 Tcham, Wcham, y, d_cham = findcoll(tolerance, chameleonacc, "Chameleon", Echamnorad, gammaHuSawicki1, 1/np.sqrt(6), M, f_R0, d_rho, 1.0, y0, True, filecham)
-"""
+
 
 
 
@@ -652,10 +684,10 @@ print "Working on LCDM"
 T1, W1, y, d_LCDM = findcoll(tolerance, LCDMacc, "LCDM", ELCDMnorad, 0, 0, 0, 0, 0, 0, y0, True, fileLCDM)
 print "Working on EdS"
 T2, W2, y, d_EdS = findcoll(tolerance, LCDMacc, "EdS", ELCDMnorad, 0, 0, 0, 0, 0, 0, y0, True, fileEdS)
-"""
+
 filesymm.close()
 filecham.close()
-"""
+""
 fileLCDM.close()
 fileEdS.close()
 
@@ -665,7 +697,7 @@ mpl.ylabel(r"$\tilde{R}$", rotation = 0)
 mpl.legend()
 mpl.savefig("Figures\Evolution_all.pdf")#, addition_artists = mpl.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.), bbox_inches = "tight")
 mpl.clf()
-
+a = np.exp(y)
 
 mpl.plot(a, T1, "c-", linewidth = 0.75, label = r"$T_{\Lambda CDM}$")
 mpl.plot(a, -W1, "c--", linewidth = 0.75, label = r"$W_{\Lambda CDM}$")
@@ -702,7 +734,7 @@ mpl.clf()
 mpl.clf()
 
 
-"""
+
 d_cham = 5.9083e-4
 masses = np.logspace(10, 18, 30)
 #want to loop over masses, but not within the rootfinding. I want a figure showing how Delta=rho_p/rho_b varies with the mass and curvature
@@ -1288,12 +1320,13 @@ mpl.show()
 
 
 mpl.close("all")
-
+"""
+a = np.exp(y)
 file = open("Numbers\Random.txt", "w")
 
 beta = 0.5
-z_ssb = 3
-L = 1
+z_ssb = 1.
+L = 1.
 rvirsymm, dsymm = findcoll(tolerance, chameleonacc, "Symmetron", Echamnorad, gamma_symm, beta, M, z_ssb, d_rho, L*3.09e22/1.97e-7/0.7, y0, False, file)
 geff_symm = np.zeros(len(a))
 for i in range(len(a)):
@@ -1302,7 +1335,7 @@ mpl.plot(a, geff_symm, "-.", label = "\gamma - 1")
 mpl.legend()
 mpl.show()
 file.close()
-
+"""
 geff_cham = np.zeros(len(a))
 DRoR_cham = np.zeros(len(a))
 geff_symm = np.zeros(len(a))

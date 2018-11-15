@@ -63,12 +63,17 @@ def virialcheck(y, mix, Omega_m0, Lambdavar, delta_i, model, full):
 		rvir = r[p]
 		avir = a[p]
 
+
+
 	if rvir:
 		#calculate the overdensity of the perturbation at TA (odensitymax) and virialization (odensity)
 		odensity = (Omega_m0*(1+delta_i)/rvir**3)/(Omega_m0/avir**3)
 
 
 		odensitymax = (Omega_m0*(1+delta_i)/rmax**3)/(Omega_m0/amax**3)
+
+		Ocoll = (1 + delta_i)*a[t]**3/rvir**3
+		print type(Ocoll)
 		
 		#set all elements in the radial array after virialization to r_vir
 		k = p
@@ -78,7 +83,7 @@ def virialcheck(y, mix, Omega_m0, Lambdavar, delta_i, model, full):
 
 	if ( collapse and rvir and not full):
 		#write values to file
-		file.write("        {:5.10f} 	  | 		 {:5.10e}    	|     {:5.10e}  	|	{:5.10f}	|	{:5.10e} 	|	{:5.10f}    |     {} \n".format(odensity, odensitymax, rvir/rmax, avir/amax, np.exp(-y[t]) -1, delta_i, model))
+		file.write("        {:5.10f} 	  | 		 {:5.10e}    	|     {:5.10e}  	|	{:5.10f}	|	{:5.10e} 	|	{:5.10f}    |     {}     |     {:5.10f}  \n".format(odensity, odensitymax, rvir/rmax, avir/amax, np.exp(-y[t]) -1, delta_i, model, Ocoll))
 
 
 	return r, collapse, y[t]
@@ -96,7 +101,7 @@ def r(x, y, Omega_m0, Lambda, r_i, delta_i):
 	rr[1] = (-Omega_m0*(1+delta_i)/(2.*r**2) + r*Lambda + 3./2.*drdy*Omega_m0/a**3)/(Omega_m0/a**3 + Lambda) 	
 
 	return rr
-
+"""
 def RsoverRspecial(r, r_iovera_i, a):
 	return 1 - (1.6e20/r_iovera_i)**2*r*(a**(3./(0.02 + 1)) - r**(3./(0.02 +1)))
 
@@ -120,7 +125,7 @@ def chameleon(x, y, Omega_m0, Omega_phi, delta_i, beta, r_iovera_i):
 	rr[1] = (Omega_phi*r - g_p*Omega_m0*(1+delta_i)/(2.*r**2) + 3./2.*drdy*g_b*Omega_m0/a**3)/(g_b*Omega_m0/a**3 + Omega_phi)
 
 	return rr
-
+"""
 
 def findcoll(delta_max, delta_min, y0, model, full):
 	#This is a part of the rootfinding algorithm, it is used inside findcollshell()
@@ -195,7 +200,7 @@ def findcollshell(y0, model, full):
 	#print np.exp(acceptance)-1
 
 	#generate filename for plot based on the model and initial redshift
-	fname = "Figures\LCDMproject"  + str(int(np.exp(-y0) - 1)) + model + ".png"
+	fname = "Figures\LCDMproject"  + str(int(np.exp(-y0) - 1)) + model + ".pdf"
 
 
 	#set initial minimum and maximum for rootfinding
@@ -319,7 +324,7 @@ if Bigloop == False:
 		findcollshell(y0, "EdS", False)
 
 		file.close()
-
+		"""
 		delta_i = 1e-4
 		for i in [0.001, 0.01, 0.025, 0.05, 0.1]:
 			rcham = odeint(chameleon, [r0, drdx0], y, args = (Omega_m0, Lambda, delta_i, 0.01, i))
@@ -328,7 +333,7 @@ if Bigloop == False:
 		mpl.title(r"Chameleon, $\delta_i$ = %.1e" % delta_i)	
 		mpl.legend()
 		mpl.show()
-
+		"""
 
 
 

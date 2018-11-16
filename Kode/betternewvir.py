@@ -382,19 +382,7 @@ def DROR( Omega_m0, Lambda, delta_i, beta, n, M, f_R0, r, a, delta_rho, perturba
 		return d
 
 def phi_symm(rho, rho_ssb, L, M, beta):
-	"""
-	try:			
-		for i in range(len(rho)):
-			if rho[i] > rho_ssb:
-				return 0
-			else:
-				return np.sqrt(np.sqrt(2)*L*beta/M_pl)*np.sqrt(rho_ssb - rho[i])
-	except:
-	"""
-	if rho > rho_ssb:
-		return 0
-	else:
-		return np.sqrt(np.sqrt(2)*L*beta/M_pl)*np.sqrt(rho_ssb - rho)
+	return L**2/M_pl*beta*rho_ssb*np.sqrt(1 - rho/rho_ssb)
 
 def DRORsymm( Omega_m0, Lambda, delta_i, beta, L, M, z_ssb, r, a, delta_rho, perturbation ):
 
@@ -416,12 +404,12 @@ def DRORsymm( Omega_m0, Lambda, delta_i, beta, L, M, z_ssb, r, a, delta_rho, per
 
 		Phi = Phi_N(r, M, Omega_m0, delta_i)
 		if (rho_p < rho_ssb and perturbation):
-			phi_c = L**2/M_pl*beta*rho_ssb*np.sqrt(1 - rho_p/rho_ssb)
+			phi_c = phi_symm(rho_p, rho_ssb, L, M, beta)
 		else:
 			phi_c = 0
 
 		if rho_b < rho_ssb:
-			phi_inf = L**2/M_pl*beta*rho_ssb*np.sqrt(1 - rho_b/rho_ssb)
+			phi_inf = phi_symm(rho_b, rho_ssb, L, M, beta)
 		else:
 			phi_inf = 0
 
@@ -1285,16 +1273,48 @@ masses = [1e12*Msun/0.7, 1e14*Msun/0.7, 1e16*Msun/0.7]
 
 beta = .5
 z_ssb = 2.0
-L = 1*3.09e22/1.97e-7/0.7
+L = 1#*3.09e22/1.97e-7/0.7
+rho_ssb = rho_c0*(1 + z_ssb)**3
+
 for M in masses:
 	rvirsymm, dsymm = findcoll(tolerance, chameleonacc, "Symmetron", Echamnorad, gamma_symm, beta, M, z_ssb, d_rho, L, y0, False, file)
+	rho = rho_c0*d_rho(Omega_m0, Lambda, dsymm, rvirsymm)
+	rho_b = rho_c0*d_rho(Omega_m0, Lambda, 0, a)
 	geff_symm = np.zeros(len(a))
+	phi_s = np.zeros(len(a))
+	phi_b = np.zeros(len(a))
+	Phi_newt = Phi_N( rvirsymm, M, Omega_m0, dsymm )
 	for i in range(len(a)):
 		geff_symm[i] = gamma_symm(Omega_m0, Lambda, dsymm, beta, L, M, z_ssb, d_rho, rvirsymm[i], a[i], True) - 1
-	mpl.plot(a, geff_symm, "-.", label = r"$10^{%.0f}$" % np.log10(M/Msun*0.7))
-	
+		if rho[i] < rho_ssb:
+			phi_s[i] = phi_symm(rho[i], rho_ssb, L, M, beta)
+
+		if rho_b[i] < rho_ssb:
+			phi_b[i] = phi_symm(rho_b[i], rho_ssb, L, M, beta)
+	mpl.figure(1)
+	mpl.plot(a, geff_symm, "-.", linewidth = 0.75, label = r"$10^{%.0f}$" % np.log10(M/Msun*0.7))
+
+	mpl.figure(2)
+	mpl.plot(a, phi_s, "--", linewidth = 0.75, label = r"$\phi_s, 10^{%.0f}$" % np.log10(M/Msun*0.7))
+	mpl.plot(a, phi_b, "-", linewidth = 0.75, label = r"$\phi_b, 10^{%.0f}$" % np.log10(M/Msun*0.7))
+
+	mpl.figure(3)
+	mpl.plot(a, Phi_newt, "--", linewidth = 0.75, label = r"$10^{%.0f}$" % np.log10(M/Msun*0.7))
+
+mpl.figure(1)
 mpl.legend()
 mpl.show()
+
+mpl.figure(2)
+mpl.legend()
+mpl.show()
+
+mpl.figure(3)
+mpl.legend()
+mpl.show()
+
+mpl.close("all")
+
 file.close()
 """
 geff_cham = np.zeros(len(a))

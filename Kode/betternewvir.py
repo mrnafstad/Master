@@ -20,7 +20,7 @@ M_pl = 2.44e27				#eV
 rho_c0 = 3*H_0**2/(8*np.pi*G)
 Msun = 2e30*5.61e26
 GtimeM_sun = G*Msun
-"""
+
 #in natural (Planck) units:
 H_0 = 9.369e-32										#eV 
 G = 1.0												#1
@@ -38,7 +38,7 @@ M_pl = 2.44e18										#GeV
 H_0 = 70/3.09e19*1.519e24							#GeV
 rho_c0 = 3.*H_0**2/(8.*np.pi*G)
 GtimeM_sun = G*Msun
-"""
+
 print H_0, G, rho_c0, Msun, M_pl   
 
 def vircheck(R, y, Omega_m0, Lambda, delta_i, acceleration, E, gamma, beta, M, f_R0, delta_rho, n, file):
@@ -864,7 +864,7 @@ mpl.close("all")
 
 
 
-
+"""
 
 
 masses = np.logspace(10, 18, 30)
@@ -874,7 +874,7 @@ z_ssbs = np.array([0.5, 1, 2, 3])
 t01 = time.time()
 for z_ssb in z_ssbs:
 	t11 = time.time()
-	filename = "Numbers\SymmetronMassloopf_R0%.1f.txt" % z_ssb
+	filename = "Numbers\NUSymmetronMassloopf_R0%.1f.txt" % z_ssb
 	
 
 	Mloop = open(filename, "w")
@@ -903,61 +903,61 @@ mpl.figure(1)
 mpl.axhline(y = 294.605, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
 mpl.legend()
 mpl.title("Symmetron")
-mpl.savefig("Figures\SymmetronMassmaindvir.pdf")
+mpl.savefig("Figures\NUSymmetronMassmaindvir.pdf")
 mpl.clf()
 
 mpl.figure(2)
 mpl.title("Symmetron")
 mpl.axhline(y = 7.09, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
 mpl.legend()
-mpl.savefig("Figures\SymmetronMassmaindta.pdf")
+mpl.savefig("Figures\NUSymmetronMassmaindta.pdf")
 mpl.clf()
 
 mpl.figure(3)
 mpl.title("Symmetron")
 mpl.axhline(y = 0.48181, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
 mpl.legend()
-mpl.savefig("Figures\SymmetronMassmainrvirrta.pdf")
+mpl.savefig("Figures\NUSymmetronMassmainrvirrta.pdf")
 mpl.clf()
 
 mpl.figure(4)
 mpl.title("Symmetron")
 mpl.axhline(y = 1.66881, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
 mpl.legend()
-mpl.savefig("Figures\SymmetronMassmainavirata.pdf")
+mpl.savefig("Figures\NUSymmetronMassmainavirata.pdf")
 mpl.clf()
 
 mpl.figure(5)
 mpl.axhline(y = 0.916595229171737, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
 mpl.title("Symmetron")
 mpl.legend()
-mpl.savefig("Figures\SymmetronMassmainavir.pdf")
+mpl.savefig("Figures\NUSymmetronMassmainavir.pdf")
 mpl.clf()
 
 mpl.figure(6)
 mpl.axhline(y = 382.562, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
 mpl.title("Symmetron")
 mpl.legend()
-mpl.savefig("Figures\SymmetronMassmaindelta_c.pdf")
+mpl.savefig("Figures\NUSymmetronMassmaindelta_c.pdf")
 mpl.clf()
 
 mpl.figure(7)
 mpl.axhline(y = 1, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
 mpl.legend()
-mpl.savefig("Figures\SymmetronMassmaina_c.pdf")
+mpl.savefig("Figures\NUSymmetronMassmaina_c.pdf")
 mpl.clf()
 
 mpl.figure(8)
 mpl.axhline(y = 0.00059037, color = "red", linestyle = "--", linewidth = 0.75, label = r"$\Lambda$CDM")
 mpl.title("Symmetron")
 mpl.legend()
-mpl.savefig("Figures\SymmetronMassmaindelta_i.pdf")
+mpl.savefig("Figures\NUSymmetronMassmaindelta_i.pdf")
 mpl.clf()
 
 Mforf = [1e12, 1e13, 1e15, 1e17]
 z_ssb_list = np.linspace(0.5, 3, 30)
 for M in Mforf:
-	filename = "Numbers\SymmetronLoop_z_ssb" + str(np.log10(M)) + "rootfinding.txt"
+	filename = "Numbers\NUSymmetronLoop_z_ssb" + str(np.log10(M)) + "rootfinding.txt"
 	f_R0_loop = open(filename, "w")
 	for z_ssb in z_ssb_list:
 		print M, z_ssb
@@ -975,7 +975,7 @@ mpl.axhline(y = 294.605, color = "red", linestyle = "--", linewidth = 0.75, labe
 mpl.legend()
 mpl.title("Symmetron")
 mpl.xscale("linear")
-mpl.savefig("Figures\Symmetronzmaindvir.pdf")
+mpl.savefig("Figures\NUSymmetronzmaindvir.pdf")
 mpl.clf()
 
 mpl.figure(2)
@@ -983,7 +983,7 @@ mpl.axhline(y = 7.09, color = "red", linestyle = "--", linewidth = 0.75, label =
 mpl.legend()
 mpl.title("Symmetron")
 mpl.xscale("linear")
-mpl.savefig("Figures\Symmetronzmaindta.pdf")
+mpl.savefig("Figures\NUSymmetronzmaindta.pdf")
 mpl.clf()
 
 mpl.figure(3)
@@ -991,7 +991,7 @@ mpl.axhline(y = 0.48181, color = "red", linestyle = "--", linewidth = 0.75, labe
 mpl.legend()
 mpl.title("Symmetron")
 mpl.xscale("linear")
-mpl.savefig("Figures\Symmetronzmainrvirrta.pdf")
+mpl.savefig("Figures\NUSymmetronzmainrvirrta.pdf")
 mpl.clf()
 
 mpl.figure(4)
@@ -999,7 +999,7 @@ mpl.axhline(y = 1.66881, color = "red", linestyle = "--", linewidth = 0.75, labe
 mpl.legend()
 mpl.title("Symmetron")
 mpl.xscale("linear")
-mpl.savefig("Figures\Symmetronzmainavirata.pdf")
+mpl.savefig("Figures\NUSymmetronzmainavirata.pdf")
 mpl.clf()
 
 mpl.figure(5)
@@ -1007,7 +1007,7 @@ mpl.axhline(y = 0.916595229171737, color = "red", linestyle = "--", linewidth = 
 mpl.legend()
 mpl.title("Symmetron")
 mpl.xscale("linear")
-mpl.savefig("Figures\Symmetronzmainavir.pdf")
+mpl.savefig("Figures\NUSymmetronzmainavir.pdf")
 mpl.clf()
 
 mpl.figure(6)
@@ -1015,7 +1015,7 @@ mpl.axhline(y = 382.562, color = "red", linestyle = "--", linewidth = 0.75, labe
 mpl.legend()
 mpl.title("Symmetron")
 mpl.xscale("linear")
-mpl.savefig("Figures\Symmetronzmaindelta_c.pdf")
+mpl.savefig("Figures\NUSymmetronzmaindelta_c.pdf")
 mpl.clf()
 
 mpl.figure(7)
@@ -1023,7 +1023,7 @@ mpl.axhline(y = 1, color = "red", linestyle = "--", linewidth = 0.75, label = r"
 mpl.legend()
 mpl.title("Symmetron")
 mpl.xscale("linear")
-mpl.savefig("Figures\Symmetronzmainac.pdf")
+mpl.savefig("Figures\NUSymmetronzmainac.pdf")
 mpl.clf()
 
 mpl.figure(8)
@@ -1031,7 +1031,7 @@ mpl.axhline(y = 0.00059037, color = "red", linestyle = "--", linewidth = 0.75, l
 mpl.legend()
 mpl.title("Symmetron")
 mpl.xscale("linear")
-mpl.savefig("Figures\Symmetronzmaindelta_i.pdf")
+mpl.savefig("Figures\NUSymmetronzmaindelta_i.pdf")
 mpl.clf()
 
 
@@ -1045,7 +1045,7 @@ mpl.close("all")
 
 
 
-
+"""
 
 
 
@@ -1274,13 +1274,13 @@ mpl.show()
 
 
 mpl.close("all")
-"""
+
 a = np.exp(y)
 file = open("Numbers\Random.txt", "w")
 masses = [1e12*Msun/0.7, 1e15*Msun/0.7, 1e17*Msun/0.7]
 
 beta = .5
-z_ssb = 1.0
+z_ssb = 1
 L = 1#*3.09e22/1.97e-7/0.7
 rho_ssb = rho_c0*(1 + z_ssb)**3
 
@@ -1349,7 +1349,7 @@ mpl.close("all")
 
 file.close()
 
-"""
+
 
 geff_cham = np.zeros(len(a))
 DRoR_cham = np.zeros(len(a))
